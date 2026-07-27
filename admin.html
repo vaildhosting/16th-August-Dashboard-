@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard CMS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #10161c;
+    --panel: #171f27;
+    --panel-2: #1c2530;
+    --line: #2a333d;
+    --text: #ece7da;
+    --text-dim: #8a94a0;
+    --amber: #e8a33d;
+    --teal: #4fa8a0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 32px 24px;
+  }
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+  .top-strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 18px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--line);
+  }
+  .top-strip h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+  .top-strip .sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    letter-spacing: 0.06em;
+  }
+  .top-strip a.open-link {
+    color: var(--teal);
+    font-size: 12px;
+    text-decoration: none;
+    border: 1px solid var(--line);
+    padding: 9px 16px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .top-strip a.open-link:hover { border-color: var(--teal); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    padding: 24px;
+  }
+  .field { margin-bottom: 20px; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--amber);
+    margin-bottom: 8px;
+  }
+  .field .hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  .field input[type="text"],
+  .field input[type="number"],
+  .field select,
+  .field textarea {
+    width: 100%;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 10px 11px;
+    outline: none;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--teal); }
+  .field textarea {
+    resize: vertical;
+    min-height: 150px;
+    line-height: 1.6;
+  }
+
+  .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .photo-thumb {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .photo-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .photo-thumb .remove-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    background: rgba(16,22,28,0.85);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .photo-thumb .remove-btn:hover { border-color: var(--amber); color: var(--amber); }
+  .photo-thumb .src-tag {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(16,22,28,0.85);
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 3px 6px;
+  }
+
+  .upload-row { margin-bottom: 8px; }
+  .upload-btn {
+    display: inline-block;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--teal);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 9px 14px;
+    cursor: pointer;
+  }
+  .upload-btn:hover { border-color: var(--teal); }
+
+  .logo-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .logo-preview {
+    width: 64px;
+    height: 64px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .logo-preview img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  .logo-empty {
+    font-size: 9px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .logo-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .logo-actions .upload-btn, .logo-actions .ghost-btn {
+    text-align: center;
+    padding: 8px 14px;
+  }
+
+  .add-url-row {
+    display: flex;
+    gap: 6px;
+  }
+  .add-url-row input {
+    flex: 1;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    padding: 9px 10px;
+    outline: none;
+  }
+  .add-url-row input:focus { border-color: var(--teal); }
+  .add-url-row button {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-size: 11px;
+    padding: 9px 14px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .add-url-row button:hover { border-color: var(--teal); }
+  .unit-toggle {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--line);
+  }
+  .unit-toggle button {
+    flex: 1;
+    background: var(--panel-2);
+    border: none;
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    padding: 10px;
+    cursor: pointer;
+    letter-spacing: 0.06em;
+  }
+  .unit-toggle button.active {
+    background: var(--amber);
+    color: #10161c;
+    font-weight: 500;
+  }
+
+  .checkbox-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .checkbox-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-dim);
+    cursor: pointer;
+    line-height: 1.4;
+  }
+  .checkbox-item input[type="checkbox"] {
+    margin-top: 2px;
+    accent-color: var(--teal);
+    flex-shrink: 0;
+  }
+
+  .apply-btn {
+    width: 100%;
+    background: var(--teal);
+    color: #0c211f;
+    border: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 13px;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .apply-btn:hover { opacity: 0.9; }
+
+  .link-row {
+    margin-top: 16px;
+    display: flex;
+    gap: 6px;
+  }
+  .link-row input {
+    flex: 1;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 9px 10px;
+  }
+  .link-row button {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-size: 11px;
+    padding: 9px 14px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .link-row button:hover { border-color: var(--teal); }
+
+  .preview-panel {
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .preview-head {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .device-tabs {
+    display: flex;
+    gap: 4px;
+  }
+  .device-tabs button {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+  .device-tabs button.active {
+    color: var(--amber);
+    border-color: var(--amber);
+  }
+  .preview-stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: repeating-linear-gradient(45deg, #0d1319, #0d1319 10px, #10161c 10px, #10161c 20px);
+    min-height: 320px;
+  }
+  .preview-frame-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    max-width: 100%;
+    transition: aspect-ratio 0.2s ease, max-width 0.2s ease;
+  }
+  .preview-frame-wrap iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  .share-panel { margin-top: 20px; }
+  .share-panel .field label { margin-bottom: 10px; }
+  .share-row {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .qr-box {
+    background: #fff;
+    padding: 8px;
+    line-height: 0;
+    flex-shrink: 0;
+  }
+  .qr-box img { display: block; width: 108px; height: 108px; }
+  .share-note {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+  .share-note strong { color: var(--text); font-weight: 500; }
+
+  .devices-panel { margin-top: 24px; }
+  .devices-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .devices-head h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .devices-head .sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 3px;
+  }
+  .devices-actions { display: flex; gap: 8px; }
+  .ghost-btn {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 9px 14px;
+    cursor: pointer;
+  }
+  .ghost-btn:hover { border-color: var(--teal); }
+  .ghost-btn.primary { color: var(--teal); border-color: var(--teal); }
+  input[type="file"].hidden-file { display: none; }
+
+  .device-table {
+    border: 1px solid var(--line);
+  }
+  .device-table-head {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 10px;
+    padding: 11px 16px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--line);
+    background: var(--panel-2);
+  }
+  .device-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 10px;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+    position: relative;
+  }
+  .device-row:last-child { border-bottom: none; }
+  .dr-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .dr-icon {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .dr-icon svg { width: 60%; height: 60%; }
+  .dr-icon .status-dot {
+    position: absolute;
+    bottom: -3px;
+    right: -3px;
+    border: 2px solid var(--panel);
+  }
+  .dr-name-stack { min-width: 0; }
+  .dr-name-text {
+    display: block;
+    color: var(--text);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dr-name-sub {
+    display: block;
+    color: var(--text-dim);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+  }
+  .dr-pill {
+    display: inline-block;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    font-size: 11px;
+    padding: 4px 10px;
+    letter-spacing: 0.02em;
+  }
+  .dr-pill.mono {
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.04em;
+    color: var(--text);
+  }
+
+  @media (max-width: 640px) {
+    .device-table-head { display: none; }
+    .device-row {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 14px 16px;
+    }
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--text-dim);
+    font-size: 12px;
+    border: 1px dashed var(--line);
+  }
+
+  .sync-active {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+  .sync-active code {
+    color: var(--teal);
+    background: var(--panel-2);
+    padding: 3px 8px;
+    border: 1px solid var(--line);
+    font-size: 11px;
+  }
+
+  .dc-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    flex-shrink: 0;
+  }
+  .status-dot.on { background: var(--teal); box-shadow: 0 0 5px var(--teal); }
+  .status-dot.off { background: #6a5a4a; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="top-strip">
+    <div>
+      <h1>Dashboard CMS</h1>
+      <div class="sub">Configure the ambient dashboard · settings apply via link, no server required</div>
+    </div>
+    <a class="open-link" id="open-link" href="index.html" target="_blank">Open dashboard ↗</a>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="field">
+        <label>City / location</label>
+        <input type="text" id="city" value="Accra">
+        <div class="hint">Looked up automatically on the dashboard — try any city name.</div>
+      </div>
+
+      <div class="field">
+        <label>Temperature unit</label>
+        <div class="unit-toggle">
+          <button type="button" id="unit-f" class="active">Fahrenheit</button>
+          <button type="button" id="unit-c">Celsius</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Weather widget</label>
+        <label class="checkbox-item"><input type="checkbox" id="show-cities" checked> Also show Kumasi, Ho, Tamale, and Sunyani</label>
+        <div class="hint">Sits at the bottom-left of the dashboard. These extra cities show as small temperature chips below the main forecast.</div>
+      </div>
+
+      <div class="field">
+        <label>Background rotation</label>
+        <input type="number" id="interval" value="30" min="5">
+        <div class="hint">Seconds between background photo changes.</div>
+      </div>
+
+      <div class="field">
+        <label>Background photos</label>
+        <div class="photo-grid" id="photo-grid"></div>
+
+        <div class="upload-row">
+          <label class="upload-btn" for="file-input">Upload photos</label>
+          <input type="file" id="file-input" accept="image/*" multiple hidden>
+        </div>
+
+        <div class="add-url-row">
+          <input type="text" id="url-input" placeholder="Or paste an image URL">
+          <button type="button" id="add-url-btn">Add</button>
+        </div>
+        <div class="hint">Uploaded photos are embedded directly into the dashboard link. For a lot of photos or very large images, hosted URLs make a shorter, more portable link.</div>
+      </div>
+
+      <div class="field">
+        <label>Welcome message</label>
+        <input type="text" id="welcome" value="Welcome to 16th August, 85 Villa" placeholder="e.g. Welcome to 16th August, 85 Villa">
+        <div class="hint">Shows at the top of the dashboard, over every background photo.</div>
+      </div>
+
+      <div class="field">
+        <label>Logo</label>
+        <div class="logo-row">
+          <div class="logo-preview" id="logo-preview"></div>
+          <div class="logo-actions">
+            <label class="upload-btn" for="logo-input">Upload logo</label>
+            <input type="file" id="logo-input" accept="image/*" hidden>
+            <button type="button" class="ghost-btn" id="logo-remove-btn">Remove</button>
+          </div>
+        </div>
+        <div class="add-url-row">
+          <input type="text" id="logo-url-input" placeholder="Or paste a logo image URL">
+          <button type="button" id="logo-url-btn">Add</button>
+        </div>
+        <div class="hint">Appears beside the welcome message — pre-loaded with the villa's lion logo, recolored white (yellow accent kept) with the background removed, for visibility over photo backgrounds. Upload a different image or click Remove to clear it.</div>
+      </div>
+
+      <div class="field">
+        <label>News bulletin</label>
+        <label class="checkbox-item"><input type="checkbox" id="show-news" checked> Show scrolling headlines under the welcome message</label>
+        <div class="hint">
+          Free, no signup needed — pulls headlines from Ghana (MyJoyOnline, with Graphic Online as backup) and
+          world news (BBC, with BBC Africa as backup) via public RSS. Each feed is tried two independent free
+          ways: through rss2json.com first, then by reading the raw feed directly if that's unavailable — so a
+          single service or feed going down doesn't take out the whole bulletin. Sits a bit below the welcome
+          message at a medium size for readability, and shows a short reason on-screen instead of disappearing
+          if it truly can't load anything.
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Flight widget — Accra departures</label>
+        <div class="checkbox-row">
+          <label class="checkbox-item"><input type="checkbox" id="show-local-flights" checked> Local (Kumasi, Sunyani, Tamale, Ho, Wa, Takoradi)</label>
+          <label class="checkbox-item"><input type="checkbox" id="show-intl-flights" checked> International (USA, Canada, UK, Australia, Germany, France, Amsterdam)</label>
+        </div>
+        <input type="text" id="flight-key" placeholder="AviationStack API key (optional)" value="3438e164eaf415bc35ed09b32badb574">
+        <div class="hint">
+          Shows on the right side of the dashboard. Turn either group off if you only want one. There's no free,
+          keyless source for real flight data, so live status needs an <strong>AviationStack</strong> API key —
+          their free tier (100 requests/month) is enough, since the dashboard makes one combined request per load
+          covering every destination in both groups. Leave the key blank and the widget still shows the
+          destination list with a note instead of live status.
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Developer credit</label>
+        <input type="text" id="dev-credit" value="Developed by Patrick Osei (PATICO)" placeholder="e.g. Developed by Patrick Osei (PATICO)">
+        <div class="hint">Small text at the bottom-center of the dashboard. Clear it to remove the credit entirely.</div>
+      </div>
+
+      <button class="apply-btn" id="apply-btn">Apply to dashboard</button>
+
+      <div class="link-row">
+        <input type="text" id="link-out" readonly>
+        <button id="copy-btn">Copy</button>
+      </div>
+
+      <div class="field share-panel">
+        <label>Open on another device</label>
+        <div class="share-row">
+          <div class="qr-box" id="qr-box"><img id="qr-img" alt="QR code for the dashboard link"></div>
+          <div class="share-note" id="qr-note">
+            Scan with a <strong>tablet, iPad, or phone</strong> to open this exact configuration.
+          </div>
+        </div>
+        <div class="hint" style="margin-top:10px">
+          For a <strong>smart TV or Windows PC</strong> browser, type the copied link, or host these two files
+          (same folder) on your local network or a static host — then every device on that link stays in sync
+          with whatever you set here.
+        </div>
+      </div>
+    </div>
+
+    <div class="panel preview-panel">
+      <div class="preview-head">
+        <span>Live preview</span>
+        <div class="device-tabs" id="device-tabs">
+          <button type="button" data-device="tv" class="active">Smart TV</button>
+          <button type="button" data-device="desktop">Windows</button>
+          <button type="button" data-device="tablet">Tablet</button>
+          <button type="button" data-device="ipad">iPad</button>
+        </div>
+      </div>
+      <div class="preview-stage">
+        <div class="preview-frame-wrap" id="preview-wrap">
+          <iframe id="preview" src="index.html" title="Dashboard preview"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel devices-panel">
+    <div class="devices-head">
+      <h2>Displays &amp; Devices</h2>
+    </div>
+
+    <div id="sync-active" class="sync-active" style="display:none">
+      <span>Sync ID: <code id="sync-id-display"></code></span>
+      <button class="ghost-btn" id="forget-sync-btn">Disconnect</button>
+    </div>
+
+    <div class="device-table">
+      <div class="device-table-head">
+        <span>Name</span><span>Status</span><span>Serial</span>
+      </div>
+      <div id="device-grid"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const DEFAULT_PHOTOS = [
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Beach_sunset_(Unsplash).jpg",
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Sunset_beach_(Unsplash).jpg",
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Sand_beach_at_sunset_(Unsplash).jpg",
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Sunsetting_Beach_(Unsplash).jpg",
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Sunset_beach_1_(Unsplash).jpg",
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Venice_beach_at_sunset_(Unsplash).jpg",
+    "https://commons.wikimedia.org/wiki/Special:FilePath/Leigh-on-Sea_beach_sunset_(Unsplash).jpg"
+  ];
+
+  let photoItems = DEFAULT_PHOTOS.map(url => ({ src: url, uploaded: false }));
+
+  function renderPhotoGrid() {
+    const grid = document.getElementById("photo-grid");
+    grid.innerHTML = "";
+    photoItems.forEach((item, i) => {
+      const cell = document.createElement("div");
+      cell.className = "photo-thumb";
+      cell.innerHTML =
+        "<img src=\"" + item.src + "\" loading=\"lazy\">" +
+        "<div class=\"src-tag\">" + (item.uploaded ? "Uploaded" : "URL") + "</div>" +
+        "<button type=\"button\" class=\"remove-btn\" data-i=\"" + i + "\" aria-label=\"Remove photo\">&times;</button>";
+      grid.appendChild(cell);
+    });
+    grid.querySelectorAll(".remove-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        photoItems.splice(parseInt(btn.dataset.i, 10), 1);
+        renderPhotoGrid();
+      });
+    });
+  }
+  renderPhotoGrid();
+
+  document.getElementById("add-url-btn").addEventListener("click", () => {
+    const input = document.getElementById("url-input");
+    const val = input.value.trim();
+    if (!val) return;
+    photoItems.push({ src: val, uploaded: false });
+    input.value = "";
+    renderPhotoGrid();
+  });
+  document.getElementById("url-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("add-url-btn").click();
+  });
+
+  function compressImage(file, opts) {
+    const maxDim = (opts && opts.maxDim) || 1400;
+    const format = (opts && opts.format) || "image/jpeg";
+    let quality = (opts && opts.quality) != null ? opts.quality : 0.62;
+    const maxBytes = (opts && opts.maxBytes) || 220000; // ~220KB cap so uploaded photos always load fast
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width, h = img.height;
+          if (w > maxDim || h > maxDim) {
+            const scale = maxDim / Math.max(w, h);
+            w = Math.round(w * scale);
+            h = Math.round(h * scale);
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+
+          // For JPEG, step quality (then size) down until under the cap, so every
+          // uploaded photo stays small and fast to load regardless of source size.
+          let dataUrl = canvas.toDataURL(format, quality);
+          if (format === "image/jpeg") {
+            let attempts = 0;
+            while (dataUrl.length > maxBytes * 1.37 && attempts < 6) {
+              if (quality > 0.35) {
+                quality -= 0.1;
+              } else {
+                w = Math.round(w * 0.85);
+                h = Math.round(h * 0.85);
+                canvas.width = w;
+                canvas.height = h;
+                canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+              }
+              dataUrl = canvas.toDataURL(format, quality);
+              attempts++;
+            }
+          }
+          resolve(dataUrl);
+        };
+        img.onerror = reject;
+        img.src = reader.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  document.getElementById("file-input").addEventListener("change", (e) => {
+    const files = Array.from(e.target.files || []);
+    // Process all selected photos concurrently instead of one at a time, and
+    // drop each into the grid as soon as it's ready rather than waiting on the rest.
+    files.forEach(file => {
+      compressImage(file)
+        .then(dataUrl => {
+          photoItems.push({ src: dataUrl, uploaded: true });
+          renderPhotoGrid();
+        })
+        .catch(err => console.error("Could not process image:", file.name, err));
+    });
+    e.target.value = "";
+  });
+
+  const DEFAULT_LOGO = "data:image/png;base64,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";
+  let logoSrc = DEFAULT_LOGO;
+  const DEFAULT_DEV_CREDIT = "Developed by Patrick Osei (PATICO)";
+
+  function setLogo(src) {
+    logoSrc = src;
+    const preview = document.getElementById("logo-preview");
+    preview.innerHTML = src
+      ? '<img src="' + src + '" alt="Logo preview">'
+      : '<span class="logo-empty">No logo</span>';
+  }
+  setLogo(DEFAULT_LOGO);
+
+  document.getElementById("logo-input").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const dataUrl = await compressImage(file, { maxDim: 300, format: "image/png", quality: 0.9 });
+      setLogo(dataUrl);
+    } catch (err) {
+      console.error("Could not process logo:", err);
+    }
+    e.target.value = "";
+  });
+
+  document.getElementById("logo-url-btn").addEventListener("click", () => {
+    const input = document.getElementById("logo-url-input");
+    const val = input.value.trim();
+    if (!val) return;
+    setLogo(val);
+    input.value = "";
+  });
+  document.getElementById("logo-url-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("logo-url-btn").click();
+  });
+
+  document.getElementById("logo-remove-btn").addEventListener("click", () => setLogo(""));
+
+  let unit = "f";
+  const unitF = document.getElementById("unit-f");
+  const unitC = document.getElementById("unit-c");
+  unitF.addEventListener("click", () => { unit = "f"; unitF.classList.add("active"); unitC.classList.remove("active"); });
+  unitC.addEventListener("click", () => { unit = "c"; unitC.classList.add("active"); unitF.classList.remove("active"); });
+
+  let syncId = "";
+
+  function toAbsoluteURL(relative) {
+    try {
+      return new URL(relative, window.location.href).toString();
+    } catch (err) {
+      // window.location.href isn't a usable base in some preview/sandboxed
+      // contexts (e.g. "about:srcdoc") — fall back to the relative URL itself
+      // rather than crashing the page.
+      return relative;
+    }
+  }
+
+  function buildURL(includeSync) {
+    const city = document.getElementById("city").value.trim();
+    const interval = document.getElementById("interval").value.trim() || "30";
+    const photoSrcs = photoItems.map(p => p.src);
+    const usingCustomPhotos = JSON.stringify(photoSrcs) !== JSON.stringify(DEFAULT_PHOTOS);
+    const welcome = document.getElementById("welcome").value.trim();
+    const flightKey = document.getElementById("flight-key").value.trim();
+    const showLocalFlights = document.getElementById("show-local-flights").checked;
+    const showIntlFlights = document.getElementById("show-intl-flights").checked;
+    const showCities = document.getElementById("show-cities").checked;
+    const showNews = document.getElementById("show-news").checked;
+    const devCredit = document.getElementById("dev-credit").value.trim();
+
+    const params = new URLSearchParams();
+    if (city) params.set("city", city);
+    params.set("unit", unit);
+    params.set("interval", interval);
+    if (usingCustomPhotos && photoSrcs.length) params.set("photos", photoSrcs.join("|"));
+    if (welcome) params.set("welcome", welcome);
+    if (logoSrc === "") {
+      params.set("logo", "none");
+    } else if (logoSrc && logoSrc !== DEFAULT_LOGO) {
+      params.set("logo", logoSrc);
+    }
+    if (flightKey) params.set("flightkey", flightKey);
+    if (!showLocalFlights) params.set("showlocal", "0");
+    if (!showIntlFlights) params.set("showintl", "0");
+    if (!showCities) params.set("showcities", "0");
+    if (!showNews) params.set("shownews", "0");
+    if (devCredit === "") {
+      params.set("devcredit", "none");
+    } else if (devCredit !== DEFAULT_DEV_CREDIT) {
+      params.set("devcredit", devCredit);
+    }
+    if (includeSync && syncId) params.set("sync", syncId);
+
+    const relative = "index.html?" + params.toString();
+    const absolute = toAbsoluteURL(relative);
+    return { relative, absolute };
+  }
+
+  const DEVICE_PRESETS = {
+    tv: { ratio: "16 / 9", maxWidth: "100%" },
+    desktop: { ratio: "16 / 10", maxWidth: "92%" },
+    tablet: { ratio: "4 / 3", maxWidth: "480px" },
+    ipad: { ratio: "3 / 4", maxWidth: "340px" }
+  };
+  const previewWrap = document.getElementById("preview-wrap");
+  document.querySelectorAll("#device-tabs button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll("#device-tabs button").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      const preset = DEVICE_PRESETS[btn.dataset.device];
+      previewWrap.style.aspectRatio = preset.ratio;
+      previewWrap.style.maxWidth = preset.maxWidth;
+    });
+  });
+
+  // True only for http(s) pages — covers "file:" (opened from disk) and also
+  // "about:" (sandboxed preview contexts, e.g. an in-app file viewer), neither
+  // of which can produce a real link other devices or services can reach.
+  const isHosted = window.location.protocol === "http:" || window.location.protocol === "https:";
+
+  const QR_SAFE_LENGTH = 1800;
+
+  function updateQR(absoluteUrl) {
+    const qrImg = document.getElementById("qr-img");
+    const qrBox = document.getElementById("qr-box");
+    const qrNote = document.getElementById("qr-note");
+
+    if (!isHosted) {
+      qrImg.style.display = "none";
+      qrNote.textContent = "This page isn't open from a hosted URL, so the link only works here. Host the two files (see below) to get a link and QR code other devices can actually reach.";
+      return;
+    }
+    if (absoluteUrl.length > QR_SAFE_LENGTH) {
+      qrImg.style.display = "none";
+      qrNote.textContent = "This link is too long to encode as a QR code (usually from uploaded photos). Use the copy-link button instead, or switch to hosted photo URLs for a shorter link.";
+      return;
+    }
+
+    qrImg.style.display = "block";
+    qrNote.textContent = "Scan with a tablet, iPad, or phone to open this exact configuration.";
+    qrImg.onerror = () => {
+      qrImg.style.display = "none";
+      qrNote.textContent = "QR code service unavailable right now — copy the link above instead.";
+    };
+    qrImg.src = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" + encodeURIComponent(absoluteUrl);
+  }
+
+  function applyChanges() {
+    const preview = buildURL(false);
+    const shareable = buildURL(true);
+    document.getElementById("preview").src = preview.relative;
+    document.getElementById("open-link").href = preview.absolute;
+    document.getElementById("link-out").value = shareable.absolute;
+    updateQR(shareable.absolute);
+  }
+
+  document.getElementById("apply-btn").addEventListener("click", applyChanges);
+
+  document.getElementById("copy-btn").addEventListener("click", () => {
+    const input = document.getElementById("link-out");
+    input.select();
+    document.execCommand("copy");
+    const btn = document.getElementById("copy-btn");
+    const original = btn.textContent;
+    btn.textContent = "Copied";
+    setTimeout(() => { btn.textContent = original; }, 1200);
+  });
+
+  // --- Displays & Devices: automatic check-in via kvdb.io ---
+  const DEVICE_TYPE_LABELS = {
+    tv: "Smart TV", tablet: "Tablet", ipad: "iPad", windows: "Windows PC", other: "Other"
+  };
+
+  function escapeAttr(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  }
+
+  function timeAgo(ts) {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 90) return "Online now";
+    if (s < 3600) return Math.floor(s / 60) + "m ago";
+    if (s < 86400) return Math.floor(s / 3600) + "h ago";
+    return Math.floor(s / 86400) + "d ago";
+  }
+
+  let registryCache = {};
+  let pollTimer = null;
+  const SYNC_PROVISION_EMAIL = "dashboard-cms@example.com";
+
+  function setSyncId(id) {
+    syncId = id;
+    document.getElementById("sync-id-display").textContent = id;
+    document.getElementById("sync-active").style.display = "flex";
+    applyChanges();
+    refreshDevices();
+    stopPolling();
+    pollTimer = setInterval(refreshDevices, 8000);
+  }
+
+  function stopPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = null;
+  }
+
+  async function provisionSync() {
+    if (!isHosted) return; // can't reach a remote service from a local file or sandboxed preview
+    try {
+      const res = await fetch("https://kvdb.io/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "email=" + encodeURIComponent(SYNC_PROVISION_EMAIL)
+      });
+      const text = (await res.text()).trim();
+      if (res.ok && text) setSyncId(text);
+    } catch (err) {
+      console.warn("Could not set up device sync:", err);
+    }
+  }
+  provisionSync();
+
+  document.getElementById("forget-sync-btn").addEventListener("click", () => {
+    syncId = "";
+    registryCache = {};
+    stopPolling();
+    document.getElementById("sync-active").style.display = "none";
+    renderDeviceGrid();
+    applyChanges();
+    provisionSync();
+  });
+
+  async function refreshDevices() {
+    if (!syncId) return;
+    try {
+      const res = await fetch("https://kvdb.io/" + syncId + "/registry");
+      if (res.status === 404) {
+        registryCache = {};
+      } else if (res.ok) {
+        registryCache = await res.json();
+      } else {
+        throw new Error("bad status " + res.status);
+      }
+    } catch (err) {
+      // Keep showing the last known list rather than surfacing an error here.
+    }
+    renderDeviceGrid();
+  }
+
+  const DEVICE_ICONS = {
+    tv: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4.5" width="19" height="13" rx="1.5"/><path d="M8 21h8M12 17.5V21"/></svg>',
+    tablet: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2.5" width="16" height="19" rx="2"/><path d="M11.5 18.5h1"/></svg>',
+    ipad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11.5 19h1"/></svg>',
+    windows: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5 10.5 4.4V11.4H3zM11.5 4.3 21 3v8.4H11.5zM3 12.6H10.5V19.6L3 18.5zM11.5 12.6H21V21L11.5 19.7z"/></svg>',
+    other: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M8 10v4M16 10v4M12 10v4"/></svg>'
+  };
+
+  function renderDeviceGrid() {
+    const grid = document.getElementById("device-grid");
+    const serials = Object.keys(registryCache);
+
+    if (!syncId) {
+      grid.innerHTML = "";
+      return;
+    }
+    if (!serials.length) {
+      grid.innerHTML = '<div class="empty-state">No devices have checked in yet. Open the dashboard link above, or scan its QR code, on a TV, tablet, or PC — it will appear here within a few seconds.</div>';
+      return;
+    }
+
+    grid.innerHTML = "";
+    serials.forEach(serial => {
+      const d = registryCache[serial];
+      const online = (Date.now() - (d.lastSeen || 0)) < 90000;
+      const icon = DEVICE_ICONS[d.type] || DEVICE_ICONS.other;
+      const typeLabel = DEVICE_TYPE_LABELS[d.type] || "Other";
+
+      const row = document.createElement("div");
+      row.className = "device-row";
+      row.innerHTML =
+        '<div class="dr-name">' +
+          '<span class="dr-icon">' + icon + '<span class="status-dot ' + (online ? "on" : "off") + '"></span></span>' +
+          '<span class="dr-name-stack">' +
+            '<span class="dr-name-text">' + escapeAttr(d.name || "Unnamed device") + '</span>' +
+            '<span class="dr-name-sub">' + escapeAttr(typeLabel) + '</span>' +
+          '</span>' +
+        '</div>' +
+        '<div><span class="dr-pill">' + (online ? "Online" : timeAgo(d.lastSeen || 0)) + '</span></div>' +
+        '<div><span class="dr-pill mono">' + escapeAttr(serial) + '</span></div>';
+
+      grid.appendChild(row);
+    });
+  }
+
+  renderDeviceGrid();
+  applyChanges();
+</script>
+
+</body>
+</html>
