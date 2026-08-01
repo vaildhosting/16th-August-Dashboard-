@@ -1,0 +1,1745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ambient dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', sans-serif;
+    color: #fff;
+    background: #000;
+    min-height: 100vh;
+    position: relative;
+    overflow: hidden;
+  }
+  .bg-layer {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transition: opacity 1.8s ease;
+  }
+  .bg-layer.active { opacity: 1; }
+  .vignette {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.05) 22%, rgba(0,0,0,0.02) 55%, rgba(0,0,0,0.55) 100%),
+      linear-gradient(90deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0) 30%);
+    pointer-events: none;
+  }
+  .screen {
+    position: relative;
+    min-height: 100vh;
+    padding: 36px 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .top-left {
+    max-width: 60%;
+    position: relative;
+    transform: translate(var(--dx, 0px), var(--dy, 0px));
+  }
+  .time-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: clamp(42px, 6vw, 64px);
+    line-height: 1;
+    text-shadow: 0 2px 18px rgba(0,0,0,0.4);
+  }
+  .time-row .secs {
+    font-size: 0.32em;
+    margin-top: 2px;
+    opacity: 0.85;
+  }
+  .day-line {
+    margin-top: 10px;
+    font-size: 20px;
+    font-weight: 500;
+    text-shadow: 0 1px 12px rgba(0,0,0,0.4);
+  }
+  .date-line {
+    margin-top: 2px;
+    font-size: 15px;
+    font-weight: 300;
+    opacity: 0.9;
+    text-shadow: 0 1px 12px rgba(0,0,0,0.4);
+  }
+
+  .bottom-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    position: relative;
+    transform: translate(var(--dx, 0px), var(--dy, 0px));
+  }
+
+  .current-panel { min-width: 160px; text-align: left; }
+  .mini-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 400;
+    margin-bottom: 6px;
+    text-shadow: 0 1px 10px rgba(0,0,0,0.5);
+  }
+  .mini-row svg { width: 16px; height: 16px; opacity: 0.9; flex-shrink: 0; }
+
+  .temp-line {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .temp-big {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 500;
+    font-size: 56px;
+    line-height: 1;
+    text-shadow: 0 2px 16px rgba(0,0,0,0.45);
+  }
+  .temp-line svg.wicon { width: 38px; height: 38px; }
+
+  .place-caption {
+    margin-top: 8px;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.85;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.5);
+  }
+
+  .forecast-row {
+    display: flex;
+    justify-content: flex-start;
+    gap: 28px;
+    padding-bottom: 4px;
+  }
+  .forecast-cell {
+    text-align: center;
+    min-width: 56px;
+  }
+  .forecast-cell .fc-day {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.5);
+  }
+  .forecast-cell svg.wicon {
+    width: 30px; height: 30px;
+    margin: 8px 0 6px;
+  }
+  .forecast-cell .fc-temps {
+    font-size: 13px;
+    font-weight: 500;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.5);
+  }
+  .forecast-cell .fc-temps .lo { opacity: 0.65; font-weight: 400; margin-left: 4px; }
+
+  .cities-row {
+    display: flex;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.14);
+  }
+  .city-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    padding: 5px 10px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 20px;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+  }
+  .city-chip .cc-name {
+    opacity: 0.75;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 10px;
+  }
+  .city-chip .cc-temp {
+    font-weight: 600;
+  }
+
+  .credit {
+    position: absolute;
+    bottom: 14px;
+    right: 16px;
+    font-size: 10px;
+    opacity: 0.6;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+  }
+
+  .dev-credit {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    letter-spacing: 0.03em;
+    opacity: 0.55;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+    white-space: nowrap;
+  }
+
+  .status-line {
+    position: absolute;
+    bottom: 14px;
+    left: 40px;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
+
+  .checkout-widget {
+    position: relative;
+    transform: translate(var(--dx, 0px), var(--dy, 0px));
+    width: 170px;
+    align-self: flex-end;
+    background: rgba(10,14,18,0.45);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    padding: 12px 14px;
+  }
+  .co-head {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.75;
+    margin-bottom: 6px;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.5);
+  }
+  .co-date {
+    font-size: 13px;
+    font-weight: 500;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+  }
+  .co-time {
+    font-size: 12px;
+    opacity: 0.85;
+    margin-top: 2px;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+  }
+  .co-countdown {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.14);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--amber, #e8a33d);
+    text-shadow: 0 1px 8px rgba(0,0,0,0.55);
+  }
+
+  .stay-panel {
+    position: relative;
+    width: 230px;
+    transform: translate(var(--dx, 0px), var(--dy, 0px));
+    background: rgba(10,14,18,0.45);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    padding: 14px 16px;
+  }
+
+  .widget-col {
+    position: absolute;
+    top: 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-end;
+  }
+  .widget-col-flights { right: 290px; }
+  .widget-col-info { right: 40px; }
+  .stay-head {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.85;
+    margin-bottom: 10px;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.5);
+  }
+  .stay-rows { display: flex; flex-direction: column; gap: 8px; }
+  .stay-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 11.5px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.14);
+  }
+  .stay-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .stay-row .stay-label { opacity: 0.65; text-transform: uppercase; font-size: 10px; letter-spacing: 0.04em; }
+  .stay-row .stay-value { font-weight: 500; text-align: right; }
+
+  .stay-qr-row {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.14);
+  }
+  .stay-qr {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+  .stay-qr img { width: 62px; height: 62px; background: #fff; padding: 3px; border-radius: 3px; }
+  .stay-qr span {
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.75;
+  }
+
+  .device-badge {
+    position: absolute;
+    top: 78px;
+    right: 40px;
+    transform: translate(var(--dx, 0px), var(--dy, 0px));
+    text-align: right;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    opacity: 0.55;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.6);
+  }
+  .device-badge #device-name {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .device-badge #device-meta {
+    display: block;
+    margin-top: 2px;
+    text-transform: uppercase;
+  }
+
+  .top-center-stack {
+    position: absolute;
+    top: 36px;
+    left: 360px;
+    transform: translate(var(--dx, 0px), var(--dy, 0px));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    max-width: 50vw;
+  }
+
+  .welcome-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+  }
+  .welcome-banner img {
+    height: 52px;
+    width: auto;
+    max-width: 150px;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.7)) drop-shadow(0 0 3px rgba(0,0,0,0.5));
+  }
+  .welcome-banner span {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-shadow: 0 2px 12px rgba(0,0,0,0.55);
+  }
+
+  .news-ticker {
+    width: 560px;
+    max-width: 78vw;
+    height: 34px;
+    overflow: hidden;
+    background: rgba(10,14,18,0.45);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 4px;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  }
+  .nt-track {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    white-space: nowrap;
+    width: max-content;
+    animation: nt-scroll 46s linear infinite;
+  }
+  .nt-track.nt-static {
+    animation: none;
+    width: 100%;
+    justify-content: center;
+    opacity: 0.75;
+  }
+  .nt-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    padding: 0 28px;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+  }
+  .nt-tag {
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 3px 8px;
+    border-radius: 2px;
+    font-size: 10.5px;
+  }
+  .nt-tag.gh { background: rgba(232,163,61,0.75); color: #1a1206; }
+  .nt-tag.world { background: rgba(79,168,160,0.75); color: #06201d; }
+
+  @keyframes nt-scroll {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  @media (max-width: 640px) {
+    .top-center-stack {
+      position: static;
+      transform: none;
+      max-width: 100%;
+      margin-bottom: 18px;
+    }
+    .news-ticker {
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+
+  .flight-widget {
+    position: relative;
+    transform: translate(var(--dx, 0px), var(--dy, 0px));
+    width: 230px;
+    max-height: 38vh;
+    overflow-y: auto;
+    background: rgba(10,14,18,0.45);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    padding: 14px 16px;
+  }
+  .flight-widget::-webkit-scrollbar { width: 4px; }
+  .flight-widget::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); border-radius: 2px; }
+  .fw-head {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.85;
+    margin-bottom: 10px;
+    text-shadow: 0 1px 8px rgba(0,0,0,0.5);
+  }
+  .fw-list { display: flex; flex-direction: column; gap: 9px; }
+  .fw-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    font-size: 12px;
+    padding-bottom: 9px;
+    border-bottom: 1px solid rgba(255,255,255,0.14);
+  }
+  .fw-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .fw-dest {
+    font-weight: 500;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+  }
+  .fw-dest .fw-code {
+    opacity: 0.6;
+    font-size: 10px;
+    margin-left: 4px;
+  }
+  .fw-status {
+    text-align: right;
+    font-size: 11px;
+    opacity: 0.85;
+    text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+  }
+  .fw-status .fw-flightno {
+    display: block;
+    font-size: 10px;
+    opacity: 0.65;
+    margin-top: 1px;
+  }
+  .fw-note {
+    margin-top: 10px;
+    font-size: 9.5px;
+    line-height: 1.5;
+    opacity: 0.6;
+  }
+
+  @media (max-width: 900px) {
+    .flight-widget { display: none !important; }
+    .stay-panel { display: none; }
+    .checkout-widget { display: none !important; }
+    .widget-col { display: none !important; }
+  }
+
+  [data-widget-key] {
+    cursor: grab;
+    touch-action: none;
+  }
+  [data-widget-key]:focus {
+    outline: 2px dashed rgba(255,255,255,0.45);
+    outline-offset: 6px;
+  }
+  [data-widget-key].dragging {
+    cursor: grabbing;
+    z-index: 60;
+  }
+  [data-widget-key].grabbed {
+    outline: 2px dashed var(--amber, #e8a33d);
+    outline-offset: 6px;
+    cursor: grabbing;
+    z-index: 60;
+  }
+  .fw-list, .stay-rows { touch-action: pan-y; }
+
+  .link-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: rgba(10, 14, 18, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .link-card {
+    background: #fff;
+    color: #1a2029;
+    width: 100%;
+    max-width: 460px;
+    border-radius: 10px;
+    padding: 40px 36px 28px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    font-family: 'Inter', sans-serif;
+  }
+  .link-icon {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px;
+    color: #8a94a0;
+  }
+  .link-icon svg { width: 100%; height: 100%; }
+  .link-icon-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #2ea86f;
+    color: #fff;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .link-card h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 21px;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .link-sub {
+    font-size: 13px;
+    color: #8a94a0;
+    line-height: 1.6;
+    margin-bottom: 26px;
+  }
+  .link-steps {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 22px;
+  }
+  .link-step {
+    display: flex;
+    gap: 14px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .link-step-num {
+    flex-shrink: 0;
+    width: 54px;
+    font-weight: 700;
+    color: #1a2029;
+  }
+  .link-code {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    background: #f3f2ef;
+    border: 1px solid #e3e1db;
+    border-radius: 5px;
+    padding: 14px;
+    margin-bottom: 22px;
+    color: #1a2029;
+  }
+  .link-close-btn {
+    width: 100%;
+    background: #e8a33d;
+    color: #1a1206;
+    border: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 13px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .link-close-btn:hover { opacity: 0.9; }
+
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+  }
+
+  @media (max-width: 640px) {
+    .screen { padding: 24px 20px; }
+    .top-left { max-width: 100%; }
+    .forecast-row { gap: 16px; }
+    .status-line, .credit, .dev-credit { position: static; margin-top: 16px; transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<h1 class="sr-only">Ambient-style dashboard showing the current time, date, and Accra weather over a beach photo background</h1>
+
+<div class="bg-layer" id="bg-a"></div>
+<div class="bg-layer" id="bg-b"></div>
+<div class="vignette"></div>
+
+<div class="link-overlay" id="link-overlay" style="display:none">
+  <div class="link-card">
+    <div class="link-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/>
+        <path d="M21 3h-6M21 3v6M21 3l-9 9"/>
+      </svg>
+      <span class="link-icon-badge">✓</span>
+    </div>
+    <h1>Link with Device</h1>
+    <p class="link-sub">Follow these steps in the CMS to link this screen and start showing your dashboard.</p>
+
+    <div class="link-steps">
+      <div class="link-step">
+        <span class="link-step-num">Step 1</span>
+        <span>Open the admin (CMS) page on your computer or phone.</span>
+      </div>
+      <div class="link-step">
+        <span class="link-step-num">Step 2</span>
+        <span>Go to <strong>Displays &amp; Devices</strong> and click <strong>Add a Display or Device</strong>.</span>
+      </div>
+      <div class="link-step">
+        <span class="link-step-num">Step 3</span>
+        <span>Enter this code:</span>
+      </div>
+    </div>
+
+    <div class="link-code" id="link-code">------</div>
+
+    <button type="button" class="link-close-btn" id="link-close-btn">Close and view dashboard</button>
+  </div>
+</div>
+
+<div class="screen">
+  <div class="top-center-stack" data-widget-key="welcome" tabindex="0">
+    <div class="welcome-banner" id="welcome-banner" style="display:none">
+      <img id="welcome-logo" alt="" style="display:none">
+      <span id="welcome-text"></span>
+    </div>
+
+    <div class="news-ticker" id="news-ticker" style="display:none">
+      <div class="nt-track" id="nt-track"></div>
+    </div>
+  </div>
+
+  <div class="device-badge" id="device-badge" data-widget-key="deviceBadge" tabindex="0" style="display:none">
+    <span id="device-name"></span><span id="device-meta"></span>
+  </div>
+
+  <div class="widget-col widget-col-flights">
+    <div class="flight-widget" id="flight-widget-local" data-widget-key="flightLocal" tabindex="0" style="display:none">
+      <div class="fw-head">Local flights</div>
+      <div class="fw-list" id="flight-list-local"></div>
+      <div class="fw-note" id="flight-note-local"></div>
+    </div>
+
+    <div class="flight-widget flight-widget-intl" id="flight-widget-intl" data-widget-key="flightIntl" tabindex="0" style="display:none">
+      <div class="fw-head">International flights</div>
+      <div class="fw-list" id="flight-list-intl"></div>
+      <div class="fw-note" id="flight-note-intl"></div>
+    </div>
+  </div>
+
+  <div class="widget-col widget-col-info">
+    <div class="checkout-widget" id="checkout-widget" data-widget-key="checkout" tabindex="0" style="display:none">
+      <div class="co-head">Checkout</div>
+      <div class="co-date" id="co-date">-</div>
+      <div class="co-time" id="co-time">-</div>
+      <div class="co-countdown" id="co-countdown" style="display:none"></div>
+    </div>
+
+    <div class="stay-panel" id="stay-panel" data-widget-key="stay" tabindex="0" style="display:none">
+      <div class="stay-head">Stay info</div>
+      <div class="stay-rows" id="stay-rows"></div>
+      <div class="stay-qr-row" id="stay-qr-row"></div>
+    </div>
+
+    <div class="stay-panel currency-panel" id="currency-panel" data-widget-key="currency" tabindex="0" style="display:none">
+      <div class="stay-head">Currency</div>
+      <div class="stay-rows" id="currency-rows"></div>
+    </div>
+  </div>
+
+  <div class="top-left" data-widget-key="clock" tabindex="0">
+    <div class="time-row">
+      <span id="hm">--:--</span><span class="secs" id="sec">--</span>
+    </div>
+    <div class="day-line" id="day-name">-</div>
+    <div class="date-line" id="full-date">-</div>
+  </div>
+
+  <div class="bottom-bar" data-widget-key="weather" tabindex="0">
+    <div class="current-panel">
+      <div class="mini-row" id="wind-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 16h15a3 3 0 1 1-3 3"/></svg>
+        <span id="wind">- mph -</span>
+      </div>
+      <div class="mini-row" id="sunrise-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><path d="M12 3v6M5 12H3M21 12h-2M5.6 5.6l1.4 1.4M18.4 5.6 17 7M4 18h16M7 18a5 5 0 0 1 10 0"/></svg>
+        <span id="sunrise">--:--</span>
+      </div>
+      <div class="temp-line">
+        <span class="temp-big" id="temp-val">--°</span>
+        <span id="temp-icon"></span>
+      </div>
+      <div class="place-caption" id="condition-text">Loading conditions</div>
+    </div>
+
+    <div class="forecast-row" id="forecast-row"></div>
+
+    <div class="cities-row" id="cities-row"></div>
+  </div>
+
+  <div class="status-line" id="status-line">Fetching weather data</div>
+  <div class="credit" id="credit">Beach sunset — Wikimedia Commons, CC0</div>
+  <div class="dev-credit" id="dev-credit"></div>
+</div>
+
+<script>
+  const qp = new URLSearchParams(window.location.search);
+  const CONFIG = {
+    city: qp.get("city") || "",
+    lat: qp.has("lat") ? parseFloat(qp.get("lat")) : 5.6037,
+    lon: qp.has("lon") ? parseFloat(qp.get("lon")) : -0.1870,
+    place: qp.get("place") || "Accra, GH",
+    unit: qp.get("unit") === "c" ? "celsius" : "fahrenheit",
+    windUnit: qp.get("unit") === "c" ? "kmh" : "mph",
+    interval: qp.has("interval") ? Math.max(5, parseInt(qp.get("interval"), 10)) * 1000 : 30000,
+    photos: qp.has("photos") ? qp.get("photos").split("|").map(u => u.trim()).filter(Boolean) : null,
+    deviceName: qp.get("device") || "",
+    deviceType: qp.get("dtype") || "",
+    serial: qp.get("serial") || "",
+    sync: qp.get("sync") || "",
+    welcome: qp.get("welcome") || "",
+    logo: qp.get("logo") === "none" ? "" : (qp.get("logo") || "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAa8AAAEsBAMAAACGYSFEAAAAHlBMVEUAAAD////////////////w4yH47lz//wAAAAAAAABUF65aAAAACHRSTlMA+wphoP3+AdkYRDoAAB6+SURBVHja7Z3fdxs3luc/hfJZp7slsiSnN8l0BIKQ92R6OpYpOQ9zzp6xO47/352zz4k7Ts7ZJ1tmlNk+PbtWCYK8Y3t2RJZk79qdhKh9AOoHKdKx5KKHyqoebKpYROGLe3HxvRcXQPRFxi/xWqb3i8RF75LQv0xkl5wzv0BYCsEv9LoAdgHsAtgFsAtgF8AugF0AuwB2AewC2AWwC2AXwC6AXQC7AHYB7ALYBbALYOG6NOfyNVND6ELNO7I+b2ApQp2EoF16viUmuD0Y2BPIdCquyq/dOe5jTo32XkirJnGt3zpEzldiUS+bp7ILsUy8ZMeEI9zVQ+LBXAWmknlbxY97jF7IMZHJq4fwqTrf5t6Jb2Gkbe1dwq5B/I2bM7D4w1fZPMs/Wvv9U55+8l4G5AB01F9gI9qbK6zkvXmrohPfAge2lJg4MO9CYPM090LhDEZ2+zjlDCrKMag8g09tChrS8whMuxShUye+XQZpgCTPwHX7YB3oFPT8+MfcgIlUaFyqjFFD2EmCLgrRhwiDTjWk8+sJ8ypZSH1rOHyxZZVzCQgDmBSwgHTo9LPhcHhb6vMmMWlv9WG0t7GDjVqMlDMCIVB5hthxIt3cBR6KQ2XOlcSEvdUH4LFUdACHMGBwQK6Q6x6Pu23PlyrKjsfF6Ng6EkggIgISUE7YQXjw4YY6T6oo4qLi5BIjlgG6h045IO47FZWs4HHrXPWxvJvB6i7AcYIDUCP8B6eMGALEMoNkcJ5UUaXb4O6vKCA3UvbwSpgAbDgsQHdpG9y2VedHYiJdl3344iuuHsJGJgzgErCJg2PkiiFe2o4/78MXu/MxH3MhwZ33B0+BJ/85T3/3kuNnrehV8kNkQDxt/yrLRfSUeMmsb/SBJz/9Nmm+BvMhweLg0H/YXle7q+TKxmFkdgpiYQTxklmX3nCOns9FGecATMibxcft52r3Ci21B24NoEWWG7kcL5n1Qb9wAP5ozwcw+bhfeS0v1KMrq+RkIsOLLUdcWTKf1YzhQ6nOAzBh/6H21+jF7Z/uGhWLfR9isTEq/VLc2a3/5HgOIms+mFMbfMN1I001ub+7grN6rT/xRJumK9F8MEfYEzbuQWs9deGudAdyeRLXPETW+Dim8gyIVR6V2tbtr2q77D9/P9QDe72Uj47YDbxrwfuYcBnE3aX7D+6vrAOw1d6+5bxNBJz8Kf/jw9UegNArD+77x47FovcxbZfZ2jUacAYNzojrpu3JIUCUdbLutv8GDZCuy348kKbZPtY0MNXtd7fH7qzLvmjvJZWhsG229sbCOGJr97ppGFjTfUyI9raOupD7wOFq8mDAWv/zyl4co8w2dwYZQNQFUu6vL7oqCmk+2z1x8/DqYd22H5xwwWK5LVyzEmu2pYS0n5/AxZo4HLPto2TyidHelabDOs0Ck0WoY0wp+tfHndDefu/EQ+55qhYXmJiGK25dmlD2x+6bk79tOqzTKDClp+BaKsbmSvFWR1dO/ninWSrcJDBh1k7i+thePxkR2Xp0EtmoWV4l5iuw+OMdz5/i0K1uALA3DVneqMiaBOZOCGxrKeAqkyLCwLy39WjlhAXRYjGBiYMJgYnuV57vih4uTGe6nn/l3lZ6b3UC2o5ZTGByPA8g7i5vCy+v5W/RI+WHNBMvJwB7t93uvfGxa9SkLjYYpUqOasX2/vq/nmTr3rsUz9Z+1z/618sQg/1P/+P4MsDT33wwfPLD33zytPrVq/caq0uDUSpxUBPW0t1UiSKuMZLmgXRrCj4mXevLThEP2ULu3qv1tdgupipWJmPbasStglxp0Ab7HWLHYZVxqiBStxGq1tfcQqpiZ8UXFKv/dtwdHN34F69jcU6UZ0PIO7/+D21DnrH66lXsMwie/vTJn4Xcs38I7toHTeli8l5zbovw1FYsbWvSIhoKbrUTsqasCwze8PnesBDaF7tGu/vhedvc1EtjbougDbC1a5Uz64Oaz0IxaVlOpSsTt2pcMtWk4lYfiLKGnJcGPWjRHQCbd4VKxfVakaJ9MulBqKg+ebR5Vyhnb/VBtNOmgDVnPPaBzbtapeu3xpvqZF0nkiAeXpFGyHs9aDA7orE+JqOMzbuadH1Qk8ZWNpymXC5fTVoVT3EvpEHeu9WnuTBcc8Yjyba+0saNRQEYPZj+cAqf1x97IQXy3q1+czNKDQZzxFfayPhwnP7Nyr3RjBHL0fNli/ymwfno5oDFy+1UTcZphJlh5sKEey00ILHy0gICM0a4ydCAXnFfz+yTOh/Uhen01866RZSYkEaujDsu7S9n+25pKm6N28aN41Q3lw7XZFxR70/2kRXSqRlu2hmh8glD0WSYu9G4okhvjv29CS2HSO2JiKFOfe5YNOZpjhqdsm1QYurSmEXcvLuy9Scn3Pro5AvWR9aJ6ObD4/E+2dz8X5OTEoEsFld3W5OCigdxa5x9aKKBWBYpQjlbZ1/NUcVGVVF16v2ls63TVKOtZHSc1qO8OjUDnE6VkKmV39WjVblqziFrDJioe4nxUv/qsdCpSK/3YXRly9Z64o028PC2cVbrF/LRaq2QrLl2bszRjK5UCedb/8dcPcw/cln3yhOAPPug5Eqd9//F+5h/d3m44l7+9B/3fleFPeIn+cLFPGTFJDa/MlcPoYWgMCfVVGw582IsLmH0XO3eK43j6KZaNImJo1eVOVRXBkD23nDlw/Un/uunQRQie8//f/0jhskzyH/8oL3z94XM/vezvCGJNWUVdTncbt4NjFEMHcJtGj/4unHbmR87RNQCiAaqomIrzbhkzVnF0nRs3lX2ZrilkPr5dGu1KnUR18pvG1lqo1wwqyhEv8JVNL8Ca9J1gNGEIe8am1IEfh/WkO3YxepjkY/uIv7v6v71v4Sbz57led7589/84YOnXMa/JoouE6voz50hYqXQuqd/98/ye18AH7WzRbKK8lrwyURacYlcAVanXxpiW+s6n26nyuAzGP21t2HXwnjWWihVFMLXe8m6q2bSP9F6woYLrU1Q1eJ6vGHDlLsVC9XHPJpNOxYaCGhTV98oNafnwpra2hKy0WMp9noA0UL1sUhcBsSfO3ZsGPpwWBClo1fhi4j3fvXEA47UqxreH592dy4D+ROVLU4fk2sAa3p8vnmj4OqOOt7y7tgchOuZNTWhoAugigrY3HG63sEqgyHq412v/MuOjXFWiu96iwZM9CE2yo55mp/WZNST1WdTWsOf6h706NioA2BngYAJgA3cmCLW12HW13lUzqRfv1l1sw1cr7G2bsR4RMeXiV9iX471sHLhrDjKREklV1/9UBgSv+S2up4/TZ6/bMZ1ach4qDXYwG2MC6zqLVFcZSOag6i8r8RY7pHbwPVOsK8zXo3EFV0EBntUv/fxUlr3+as/OkclyBS1Ujc3B0N1UFnNRTAeCZFxnbFyd+znZdPLvFb9vVIk4upt+13dfjhJ2pRZbMZ4JLSUqFcoXpadvi5dkQ1Zt/et0ul+KOXBmFeHTBBiUVRRmGFsiYZ1y2FMm35hMMYmh5zpZiXlej6U9dWn3w2JWv1scVSRT9VYXo74Or0OhZUQyXF9IKYf0o/2wW3YnTFdlJ1eMzVqaFLCOlS/+nNt+ZKByIS2+35s8479wmBEwGNJfcnIcYJphgY3MY5F0a+eHtXNW7R/5IDcB92io8sf1tQ07/z4MgfotF9B/sOzo7+vBjPxNDt+79XbD2TN5Hk4sbxs63mkrZaXQuhb0ca4j3Zt30dskgzIJbWJTKccq8PFGcdMLUoF3b4PP8Uhmugm4hj7qXdOPQd+PpQ1aScD20iYqiHjoeppUKKvPAfZSFPvnoxP54k0uNY+ou/+aL+rCRvXTJ56Q3HF+lRL59hHe8Vh2KNJSFub0tN+3lIo/cjHH+OWq+xHQxMuzcUVu1VT7YSc57X4cCeoorRaF+GONDht9sFzn5w5UrZKxG8s5N6UxMokgHiJS0Fgn/fpZEangtUlgyYVyhmuDocOHzre/LodfvK4ND0raTMSawhYZTuuf+MtB+0og6glUgFt0faz0UJFA69tqtsPz4AYym4xCjYzq6mShgKm7SgEZuK/SB+MiZ4BiGeDL4xc+dsnr1795qP0WOevXhJ9OCRES3949h5A/skPRbyUZurT3DRSUnKrA9/irY4fl264m5YMcMM7twYAiSs7Uy797w7Mx72JghaEUpX1sc6PxpFth1BU3JfGa+eDQH0dIEcAvBi0vYt5/O0yjV5NRYILW2TiusCA7OG1F7K2liVerrPl0UYQGYXIdsRCScwMCzLlhyERBBaLyD0fvdjaLpLiih3uiqawRy0vWFHYDLNIEitLs8HdXCtS0MnZU6O93iPvuYgl6wVWJI/lPkqKZr9ZVWwoxI2fgJW/2vd7qxTN3v1z+6Oh/usnv1n97cFlEMsFB8mP/ta/94eDywD/+lR+5K3pq7wRq9jMOFYwqqOQIBWtes0ThzcehmGNzf1BvFTgEtG178P9Fa/FK+yXE7yLRKm84FTgwq1g4tbifYKusbPb+6nijO5gFO4Hiy/plN7n4lCqILHOMV4Th14acattVgxbCXlGnrX3W0Z7N0eI5e6ORy+OlgP7iLIGJdaQVYwA4h08ZXTS959Pv2njJPcL32bDFElVKs+M6/X9w0M/lGObHMoaApYH99dzv5aPf8TfdDKgSOtzZKhL0hCNcBG5DGOy9P2ydSyHiwfM1zATnT4QHxxRCk6nhZ+pEYjRQ6CTiXbG8cee+X7vdXE1Q5nm+liTxuNYmKBcYbQ+gCLWBsIlLWH2e7C5YzEgQhAgPN73O4G4xZOYMKG5N468zTebBoQJEVF5cCQOFfe67btK2GUYbYRwY6ttgMg0uWanSYldk8GPDpKQ2gCjmxatQdubuNtWyN1tbdN/8ITZW3q/Z4tTgRgvHPN479WKewXETy979rH6EuDffpsNh3olVQaefvLPK+1smF/1U2e/9qwjfnYZ4DLJ7582xjyakZhTPTjGSyD0GRcS/UbHXN1K06sZwGOZ2s9UkdoXwuKjTvB8hFk4VXQgjPFeWVCwVlHNnLW9O3c8ltGLO7d2VfHSneDG+U3vVv3stFq0PpYXhfkoVGyLMKlQ8OABm+3hcKU3etCvUtxy/CTSTgbQt3RqORQLAiwDGax9GMTUtcKoeJ5/12qd3lOBZQR76CFG/ULuvYWzilkphjgNpLboMBZgc1vLNNXyux4gsjKQ4IHGhUZnC7h+rKhs7qNUO4W7EiEM8V2dAinq22Us+yFuHFn/fjn0fFNkiyYxUY3PufIeTCFB6cw+nxbLcezHPWFS2SusqQv8OIQFmjOLDcUVj7LfPMmj6DJw/TuA68Mi0miPNy7/5rsigyU/3v+wtf7XLHz5wcvfPwWebD6F6FUerb/8dSPbqjcXV9TlsBqHjqUKmygP7G5tcl2ag7ScWEr8mFDWYi82C2Y89vKxvhabIkn4mlNO1ZPHrJLotSLY5g1+OTLnbsH6mHOtokpHvvMUMrEHfaQbezThu2J2TxgJMDpZzKJITJSzlssAG6zVat6nmswTClPhHik3PnTZBZNY6YMRZ1BLcctlAj2RgtZaa4Wz9EAWuhiIV1I6qwvntpgQIBgpIN4p8nRawkDmtCBN0zS1QmyQwU7Rq1Z9J0vqxSxcaKDyfnNSH7+IrViGTByjoy7wSBjbykCEeQq2j7uDetxkER3NWmF58dHJtYIPyx299kCDEDGMNjrFT3aB8dXeCwfMqV6o44YKMZkNkUGu1sD891vDF3f6hhF7FUtEoHvM4xJzUUVbBJvsPpCn41ncORCFPVxH1Y4QPbmwwEoi7IK1D8OUSurAEtWrDXSl18mAhQcWF7tA+qnYjfH511UH1cyg42CiVRbYeOQhSMCGMEAmxmzDNqbWyZJSgcXiAjMHhUsWgHnmlJWeSQTFZGYUfK+kYMtxs9uzNrs5a15QPi+j2PjjkPZbUFGnyOQJRGEk22nNZRhrWP6hcluBVzi1RjG9GV6kADQwKhaEW9FbeGBFkGZQI/JFjX1P2sAfIAS0ishNuU33AkssICvsmw6S65ZzKAIYqdwHcrLQ7bIS88L2sVBHIzyQzLSBnN0kgh+BHx2UGQM2oDVR0ij9nYfEgv+oCzsnvBKq8aeU9qI6KD202m8XE5iHVMW21VSq5FfEFRGq4FwKtcgSc2OmLffzQlnN0zK1F7oQp5uLtW98v/terY69MSqVjDmUQOJ6wCisc9xwCw1sbKeAwQwOmPhbydg3ZrElZkMUvguQhS0XvZyycdnBTj2gHQuz2KoYUs9H3oj0/SsS4AkJJC9rL3XmYIaoF1EVZeUPh6BubICR8lPsgej6KCm1FWcbcsGNRwhZx0Bez9kIpkHV1ikGauUjCo2fb9I0MOOZ7t4JA/5j/I8Q/083muIMnAPjAVFpud1J5v9fTiKKRemoLTQwV/ldog4imebe6B745ZsbbtGB1VIawgYreQ1MXkcYlQ7LHLpY80cIecc4msL5o4m7I6pogVl8iflVw/kkMOvUH6CnRDJBRXIIAf8FB+a9/3ySSjlcxo/OuX4VpIMsANPuHAAz32dT3iEEWYIRYtKqADyfw4H2zR836WQfdHGkK4DJEyJDh8QStcA4XeWS9lJjmoc1F1W0amwM60nWAYX9x//qVVDVYnG4yuNedGDOFEQiDzXfg8jQ+TRXRMXIVbeY6fkAVuPvleUbKekOpENVfWs03Vtb2D4W4lTLQOhKTnX7OKwTTo1gI/SpsDA/nWfTNn91qG1jJAwkOC0hqehuT44RlfMhMfbaE/JbzUhBJMTF/s2DecRw5i0xJ3vUOIaEvg0+dZmsmPkHzxcwX21bUv4aZZK1+bBkLpZ+rsBshqiQ2Z0QP+wSFwcF+fmw7LwBw5JSBjXcmvLRmrTSRAciEcacM2Cug7BVjq/dQSqQKi6zwDYkaT+X505iTkW1oJpb8+tq46Vy7iFDCOaGa27mHnsJsHnhMNsQsRHlmr9jiOIdd+4kxqNOnd46vy2mLnEJY8g/VudPYk5tgxv1Cvclrf0LkKvUzSGF6h1IzGjPmGZskNtyzc+JvROJeelMHvZRNmds3RwC9u9EYiWZmqanuDm/d97A3NSz0oToS3m+gWF3etMEtrVj5i2ynppv+epUtxt7a2/eEsNO5e/CnPM+Bi6dbj3OPbB/r+sC2AWwC2AXwC6AvSG71wX9Fipw9fpYm2rC95rJ06qKv4tPZQHhozPh0/gHzbT3TFQp1KnyYM0pKZXQhTy916TVG8pcvI4x+VKECo+IyVqDVrO1SFfV+VlKNUti2qVBYkLaq4rBthgv0ksM47fmrLWr0xR5LMK3qEDhE2ZFKq4qUmeVwepxiYlUC+VMKpSZITGdaqEGA6tMrSqzJDYLWCo+24VIOKS91T+EL3aFqe9po9oG8gTBEBAlRxJqiF+3LsQQaCtDNAyLbWUs+4cQb+wokQ9BCOf3Gb+OlZcOOYQvdm1cf0+t5PTqIYfE0oIrH7k+I6dnhtj1Z+1d/GJyf+4v28+nFWBOJtXYUmnGfjByoA8GfYDR/kYt/yHx/x34/SO2n8/y1KTfP270QioRn9EqCrFbFlcsTHE334z0rkGYgjj5rrKIx7p6ceYFXXznns+oabELyOhYnN3cm6q4tVN6QglUmb7jX1WLd0aDSQ3a7/8M81f5qXyeGcCqwm1/TMd+tjz/VjfFLgrWZjuatemkWVVKylaR6szAKsVeO6VvaGY3e9VG1ZxLZXPKjzPmAmvTF+rMEvOrLasXbq3DtTfz5vXMd8tr1eeNExLrA7GG1x/71F1RQP8N2vjSTFX0MVwzBDa/Yn1gHSvhiL6V1/SEkGi5k8wQ5tau1YfxiaQwAbD0QGztCssKRAOgm8HYtmlxnypQ2TYAX5+SUh2sfO2tAMBd2NUppBC3wqCpCnoydnw6biUDyr3u61WPAeKvhHzUPTJuQlX2W0CCvP9ZKzUpiDYwmCwkZ/y0doQ65QBtfHN5YEJr3F2dUsDQhcRcAbV8UXEUiFOTe6azvwx8ajHayNbU6jze2uZ+UP9haLeSeagjcDLtAj27B4g7uHRmyu1MShX68AiIhg/gSgppOG/QuGJp4srk7yIgHgGtbPKrtQz4RhpSdfLg584QGO29L7eFc2nYsNGNVVsZeL4u+8X87vABiGVlTmcVU1cZgRGAu/1G8+ARYdFKMnUEiZXorqwctVfen/zWW6vR3hezbLnf8m7QHzOpTouzmftay+6YNzCLfs+mDPh+asnOhOFoNCvQuP181nhZHrJcN6kPzzqOVQ0/epMleS4BegdTrUedQXGC7JVw3IzTT12ZQZzWFXnWgUOn8KDf4PQ9f+pk1oHZRxwlMyhm+fg/TReZLrfTeW5r1e6LtwC2tc7rZDBRXLy9C6dYS+qRVocJzWBMFelyG3K0CuK1tXoTYPFX9xPeKOlf7gKjO3egPCBNj9GQSfdXlbrp5L311zEmYftAfAPAWrF7pXt4/8pravUzM5oi8z7x/nSeE/dg1K893jMUu6RHRg2D+dlfLgboEeL5jfBAaO6wFktY7mv9YBpDC5EXIF768uohCJx6hCZtnymY40fqBDCo6RvC/vTl+ADtkjrfdL0+7GTaRRnEmGVA2kePRLvyPnWxP7ns7ok0XZ/cIiIdGwad1WkbRogDJZhVqzcCtn4IqFkSm6BUYvwIsrBXfypu9SH3G7z905IIQ2oMcPsuVw+BTOwfiWX07qYZN0a3gUeYossq1BBi5Io9LE4nPhuwvRaIlG423Zal46Xr+umF0mQAz2+4PpD7MXH0XLG1W3onD294mWTIzL3YyvSkzXwAdDJA5ECUErdgxMER77cCDT4bsBwY3eEBbzKnpcaG3Z2kn1BNkEmRZIAbBsLeGdZUzdKG0Z6niFMb0YhlcLdNpw+x62aMfEH5WR3NHvDgAbzJ1i9urL0jUx+FJeZgwuerk/TOiSH8BJsEeDjsA3ltdeesNLOfA1bzm382K9mHBa4Ph8NhBjhVe2d8bMrTFWoGN1zX6toQT1/DXtvFLxf1BjujVSy7kLA/q4v7LeBYEyxKK6uotwMnagdiOOrUc4zUOJVOdeqro6FaK4N6g51JYhXVWft5KhEB9NM0NTlAIsrTnOKWA1PlhMUt5yrF3TSpq47TkNMbsDpaTtjq8I1Pz0qCS6oT/XxmhlwrrLhf9/e9keH0aj62BlxJm+IlC+WJSOKuxD4q6ro540VFyiPxsiyfFt+4U6uiuAGDQ5z65mYftna905vfgPxP3ozDv/Xrd4hvgPNBiIMbkP/JunXZh1j2pQGcure16+Me0tT+aqc4/UjrBxDLu15/b0C+Z1hfrsJ/vrCtXevQjz7zP12e2dw/m8AilNA39Bkn0jRCa62q7THR61s6UEah0FoXRWvQWqvxvG5Bd2VFjxXmf6wR66+plerNPnqhnNQS0oAOQZNqqqtgcbXJL82Jj9o/kpaFptQLq/+lSatHi1LFrX5cHn2oXVUTXf/plHj0m5wpIdRbLBgqp/VqrDad/dd4TUVX9utnrdVr8tpaNXZM15wukSdw/Qwp7A0fb9L8FUN8tqXECw4s58bS2fJQLy00LidWvhTulygxl+ozpqIutsSCVf8FSuwthhl+odf/jylH/9696+3WG5xBYqr8f57iFmlq3qXEdJUqYU9S0CmtLNSslhfqdaZBxsnh22ykc0pgKs+46bmb7vTjcWMsGBJNjKdCDGdkBaloiJpZdSEGgyh5d6poKU66FFF/ZnSgiWvvLZPzT9tNbDm/sT8186ypBdtKvWYmah7AcnBKhQBHb34rb5zi9RkfDQNzshdCwiJpepPp8S7W5+02yTy1xTbB7Xdmjquzw8xt9BbjyWnNvRXL9DO/PXNs57ZExR80Gr1D40EecvbsePS96S6WQO+trMepgXWCMVybx75mVRczxF+/1Z7IpwXmXA96CpU0v8He+HDoxFsdDn36XxpoeV2ZI1Xch43OmyUqNAXMGtgRQvSZ384OqDU4dj2cVO9OYtofeVmcxzW34bmPeZuj5U/tj7kcnCLP2DDzsx19hDJimSR7dxJzvbDfu51rF8sNOXxv35nEEAZUSP+Y4/AsExi+xRB9emBGLLOTHc3VfU6ycLb8SJ01PnCG6uWexOXzw1XLPpDvsI+t9XAj6Ll52o7i2rHvDBgigz/OZ4u9OrV/S4/8LOG3DPrEb74bnRClo3OiWad946l9MaKl7wyY33wkf/NO7WbWbbplcCtZmIl2hpYy70xicgjkb96U398AYEo0bf3KlG+EMMQh5zE58xB9BmDOAcjstBKbkoS3HVyh8bL2W349JIjDqWtJ5iUxlIHjM+jwKXwWv3qT9pljcGcZZkUG8fx4h7xWhNGd6r3ZYrGGgBk7ezFrEwFTAyH1y5kz79VyJmLU6fWmnyjQi0/wkbxMWuxNfDPzi96NQv/sQXzW1lnsPI+z0+jkTMZj5gyKPklIZi/FnvmNHku/OSML/sVK7GIO+gLYBbALYBfALoCd5+v/AQuTWpDmQXu3AAAAAElFTkSuQmCC"),
+    flightKey: qp.get("flightkey") || "3438e164eaf415bc35ed09b32badb574",
+    flightKey2: qp.get("flightkey2") || "",
+    showLocalFlights: qp.get("showlocal") !== "0",
+    showIntlFlights: qp.get("showintl") !== "0",
+    showCities: qp.get("showcities") !== "0",
+    showNews: qp.get("shownews") !== "0",
+    devCredit: qp.get("devcredit") === "none" ? "" : (qp.get("devcredit") || "Developed by Patrick Osei (PATICO)"),
+    showWifi: qp.get("showwifi") !== "0",
+    wifiSsid: qp.get("wifissid") || "",
+    wifiPass: qp.get("wifipass") || "",
+    showCheckout: qp.get("showcheckout") !== "0",
+    checkout: qp.get("checkout") === "none" ? "" : (qp.get("checkout") || "2026-07-31T21:19"),
+    showHouseInfo: qp.get("showhouseinfo") !== "0",
+    doorCode: qp.get("doorcode") === "none" ? "" : (qp.get("doorcode") || "001"),
+    receptionNum: qp.get("receptionnum") === "none" ? "" : (qp.get("receptionnum") || "001"),
+    trashDay: qp.get("trashday") === "none" ? "" : (qp.get("trashday") || "Tuesday"),
+    policeNum: qp.get("policenum") === "none" ? "" : (qp.get("policenum") || "911"),
+    hospitalNum: qp.get("hospitalnum") === "none" ? "" : (qp.get("hospitalnum") || "119"),
+    showCurrency: qp.get("showcurrency") !== "0",
+    showcase: qp.get("showcase") === "1"
+  };
+
+  const WEATHER_CODES = {
+    0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+    45: "Fog", 48: "Depositing rime fog",
+    51: "Light drizzle", 53: "Drizzle", 55: "Dense drizzle",
+    56: "Freezing drizzle", 57: "Dense freezing drizzle",
+    61: "Slight rain", 63: "Rain", 65: "Heavy rain",
+    66: "Freezing rain", 67: "Heavy freezing rain",
+    71: "Slight snow", 73: "Snow", 75: "Heavy snow", 77: "Snow grains",
+    80: "Slight rain showers", 81: "Rain showers", 82: "Violent rain showers",
+    85: "Slight snow showers", 86: "Heavy snow showers",
+    95: "Thunderstorm", 96: "Thunderstorm, slight hail", 99: "Thunderstorm, heavy hail"
+  };
+
+  function weatherIcon(code) {
+    const s = 'fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"';
+    if (code === 0 || code === 1) {
+      return '<svg class="wicon" viewBox="0 0 24 24" ' + s + '><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>';
+    }
+    if (code === 2 || code === 3) {
+      return '<svg class="wicon" viewBox="0 0 24 24" ' + s + '><path d="M7 18a4 4 0 1 1 1.2-7.8A5 5 0 0 1 18 12a3.5 3.5 0 0 1-.5 6.9H7Z"/></svg>';
+    }
+    if ([45,48].includes(code)) {
+      return '<svg class="wicon" viewBox="0 0 24 24" ' + s + '><path d="M3 10h18M3 14h18M3 18h12"/></svg>';
+    }
+    if ([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) {
+      return '<svg class="wicon" viewBox="0 0 24 24" ' + s + '><path d="M7 15a4 4 0 1 1 1.2-7.8A5 5 0 0 1 18 9a3.5 3.5 0 0 1-.5 6.9H7Z"/><path d="M8 19l-1 2M12 19l-1 2M16 19l-1 2"/></svg>';
+    }
+    if ([71,73,75,77,85,86].includes(code)) {
+      return '<svg class="wicon" viewBox="0 0 24 24" ' + s + '><path d="M7 15a4 4 0 1 1 1.2-7.8A5 5 0 0 1 18 9a3.5 3.5 0 0 1-.5 6.9H7Z"/><path d="M8 19v2M12 19v2M16 19v2"/></svg>';
+    }
+    if ([95,96,99].includes(code)) {
+      return '<svg class="wicon" viewBox="0 0 24 24" ' + s + '><path d="M7 14a4 4 0 1 1 1.2-7.8A5 5 0 0 1 18 8a3.5 3.5 0 0 1-.5 6.9H7Z"/><path d="M12 15l-2 4h3l-2 4"/></svg>';
+    }
+    return '<svg class="wicon" viewBox="0 0 24 24" ' + s + '><path d="M7 15a4 4 0 1 1 1.2-7.8A5 5 0 0 1 18 9a3.5 3.5 0 0 1-.5 6.9H7Z"/></svg>';
+  }
+
+  const DEFAULT_BG_PHOTOS = [
+    { url: "https://commons.wikimedia.org/wiki/Special:FilePath/Beach_sunset_(Unsplash).jpg", credit: "Beach sunset, Málaga — Wikimedia Commons, CC0" },
+    { url: "https://commons.wikimedia.org/wiki/Special:FilePath/Sunset_beach_(Unsplash).jpg", credit: "Sunset beach, Tuakau — Wikimedia Commons, CC0" },
+    { url: "https://commons.wikimedia.org/wiki/Special:FilePath/Sand_beach_at_sunset_(Unsplash).jpg", credit: "Sand beach at sunset, Cascais — Wikimedia Commons, CC0" },
+    { url: "https://commons.wikimedia.org/wiki/Special:FilePath/Sunsetting_Beach_(Unsplash).jpg", credit: "Sunsetting beach, Ocean Beach SF — Wikimedia Commons, CC0" },
+    { url: "https://commons.wikimedia.org/wiki/Special:FilePath/Sunset_beach_1_(Unsplash).jpg", credit: "Sunset beach — Wikimedia Commons, CC0" },
+    { url: "https://commons.wikimedia.org/wiki/Special:FilePath/Venice_beach_at_sunset_(Unsplash).jpg", credit: "Venice Beach at sunset, LA — Wikimedia Commons, CC0" },
+    { url: "https://commons.wikimedia.org/wiki/Special:FilePath/Leigh-on-Sea_beach_sunset_(Unsplash).jpg", credit: "Leigh-on-Sea beach sunset, Essex — Wikimedia Commons, CC0" }
+  ];
+  const BG_PHOTOS = CONFIG.photos && CONFIG.photos.length
+    ? CONFIG.photos.map(u => ({ url: u, credit: "Custom photo — set via dashboard CMS" }))
+    : DEFAULT_BG_PHOTOS;
+  let bgIndex = 0;
+  let bgToggle = true;
+  const preloaded = {};
+
+  function preload(url) {
+    if (preloaded[url]) return preloaded[url];
+    const img = new Image();
+    img.src = url;
+    const p = img.decode ? img.decode().catch(() => {}) : Promise.resolve();
+    preloaded[url] = p;
+    return p;
+  }
+
+  function showBackground(index) {
+    const photo = BG_PHOTOS[index];
+    const layerA = document.getElementById("bg-a");
+    const layerB = document.getElementById("bg-b");
+    const incoming = bgToggle ? layerB : layerA;
+    const outgoing = bgToggle ? layerA : layerB;
+
+    preload(photo.url).then(() => {
+      incoming.style.backgroundImage = "url('" + photo.url + "')";
+      incoming.classList.add("active");
+      outgoing.classList.remove("active");
+      bgToggle = !bgToggle;
+      document.getElementById("credit").textContent = photo.credit;
+    });
+
+    // Stay two photos ahead so decoding never happens right as a photo is needed
+    preload(BG_PHOTOS[(index + 1) % BG_PHOTOS.length].url);
+    preload(BG_PHOTOS[(index + 2) % BG_PHOTOS.length].url);
+  }
+
+  function rotateBackground() {
+    showBackground(bgIndex);
+    bgIndex = (bgIndex + 1) % BG_PHOTOS.length;
+  }
+
+  rotateBackground();
+  setInterval(rotateBackground, CONFIG.interval);
+
+  function pad(n) { return String(n).padStart(2, "0"); }
+
+  const ACCRA_TZ = "Africa/Accra";
+  function getAccraParts(now) {
+    const fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone: ACCRA_TZ,
+      hour: "numeric", minute: "2-digit", second: "2-digit",
+      hour12: true, weekday: "long", year: "numeric", month: "long", day: "numeric"
+    });
+    const parts = {};
+    fmt.formatToParts(now).forEach(p => { parts[p.type] = p.value; });
+    return parts;
+  }
+
+  function updateClock() {
+    const now = new Date();
+    const p = getAccraParts(now);
+    document.getElementById("hm").textContent = p.hour + ":" + p.minute;
+    document.getElementById("sec").textContent = p.second + " " + p.dayPeriod;
+    document.getElementById("day-name").textContent = p.weekday + ",";
+    document.getElementById("full-date").textContent = p.month + " " + p.day;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  if (CONFIG.deviceName) {
+    document.getElementById("device-badge").style.display = "block";
+    document.getElementById("device-name").textContent = CONFIG.deviceName;
+    document.getElementById("device-meta").textContent =
+      [CONFIG.deviceType, CONFIG.serial].filter(Boolean).join(" · ");
+  }
+
+  if (CONFIG.welcome || CONFIG.logo) {
+    document.getElementById("welcome-banner").style.display = "flex";
+    if (CONFIG.welcome) {
+      document.getElementById("welcome-text").textContent = CONFIG.welcome;
+    }
+    if (CONFIG.logo) {
+      const logoImg = document.getElementById("welcome-logo");
+      logoImg.src = CONFIG.logo;
+      logoImg.style.display = "block";
+    }
+  }
+
+  document.getElementById("dev-credit").textContent = CONFIG.devCredit;
+
+  // --- Automatic check-in with the CMS, if this link includes a sync ID ---
+  function simpleHash(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) {
+      h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+    }
+    return Math.abs(h).toString(36).toUpperCase();
+  }
+
+  function getDeviceSerial() {
+    const raw = [navigator.userAgent, screen.width, screen.height,
+      Intl.DateTimeFormat().resolvedOptions().timeZone].join("|");
+    return "DASH-" + simpleHash(raw).slice(0, 6);
+  }
+
+  function detectDeviceType() {
+    const ua = navigator.userAgent || "";
+    const platform = navigator.platform || "";
+    if (/Tizen|SmartTV|SMART-TV|GoogleTV|WebOS|CrKey|AFT[A-Z]|BRAVIA|HbbTV/i.test(ua)) return "tv";
+    if (/iPad/i.test(ua) || (platform === "MacIntel" && navigator.maxTouchPoints > 1)) return "ipad";
+    if (/Android/i.test(ua) && !/Mobile/i.test(ua)) return "tablet";
+    if (/Windows/i.test(ua)) return "windows";
+    return "other";
+  }
+
+  async function checkInDevice() {
+    if (!CONFIG.sync) return;
+    if (window.location.protocol === "file:") {
+      console.warn("Skipping device check-in: this page is open from a local file, not a hosted URL.");
+      return;
+    }
+    try {
+      const base = "https://kvdb.io/" + CONFIG.sync + "/registry";
+      const serial = getDeviceSerial();
+
+      let registry = {};
+      try {
+        const res = await fetch(base);
+        if (res.ok) registry = await res.json();
+      } catch (e) { /* first check-in, key may not exist yet */ }
+
+      const existing = registry[serial] || {};
+      registry[serial] = {
+        name: existing.name || CONFIG.deviceName || "",
+        type: existing.type || CONFIG.deviceType || detectDeviceType(),
+        lastSeen: Date.now()
+      };
+
+      await fetch(base, { method: "POST", body: JSON.stringify(registry) });
+    } catch (err) {
+      console.warn("Device check-in failed:", err);
+    }
+  }
+  checkInDevice();
+  setInterval(checkInDevice, 120000);
+
+  // --- "Link with Device" overlay ---
+  // Every real CMS-generated link always carries at least &unit= and
+  // &interval=, so a genuinely empty query string only happens when someone
+  // opens this file directly with nothing configured yet — exactly the
+  // "brand new TV" scenario this screen is for. It shows a short code (the
+  // same fingerprint-based identity used for automatic check-in elsewhere)
+  // so it's recognizable later once this device actually connects for real.
+  if (window.location.search === "") {
+    const codeEl = document.getElementById("link-code");
+    codeEl.textContent = getDeviceSerial().replace("DASH-", "");
+    document.getElementById("link-overlay").style.display = "flex";
+    document.getElementById("link-close-btn").addEventListener("click", () => {
+      document.getElementById("link-overlay").style.display = "none";
+    });
+  }
+
+  // --- Live config sync ---
+  // When this dashboard was opened via a synced link, the CMS's "Apply to
+  // dashboard" button pushes the new settings to the same free store used
+  // for device check-in. This checks for that periodically and, if the
+  // settings have actually changed, reloads with the new configuration —
+  // so a change made in the CMS shows up here automatically, without
+  // needing to regenerate or reopen the link by hand. This device's own
+  // identity (sync ID, device name/type/serial) is preserved across the
+  // reload; only the property's settings themselves get refreshed.
+  function currentConfigQuery() {
+    const params = new URLSearchParams(window.location.search);
+    ["sync", "device", "dtype", "serial"].forEach(k => params.delete(k));
+    return params.toString();
+  }
+
+  async function checkForConfigUpdate() {
+    if (!CONFIG.sync) return;
+    try {
+      const res = await fetch("https://kvdb.io/" + CONFIG.sync + "/config");
+      if (!res.ok) return;
+      const remoteConfig = (await res.text()).trim();
+      if (!remoteConfig) return;
+      const localConfig = currentConfigQuery();
+      if (remoteConfig !== localConfig) {
+        const identityParams = new URLSearchParams(window.location.search);
+        const newParams = new URLSearchParams(remoteConfig);
+        ["sync", "device", "dtype", "serial"].forEach(k => {
+          if (identityParams.has(k)) newParams.set(k, identityParams.get(k));
+        });
+        window.location.href = "index.html?" + newParams.toString();
+      }
+    } catch (err) {
+      // Try again next interval — this isn't urgent enough to interrupt anything.
+    }
+  }
+  if (CONFIG.sync) {
+    setInterval(checkForConfigUpdate, 10000);
+  }
+
+  function windDir(deg) {
+    const dirs = ["N","NE","E","SE","S","SW","W","NW"];
+    return dirs[Math.round(deg / 45) % 8];
+  }
+
+  function setStatus(msg) {
+    document.getElementById("status-line").textContent = msg;
+  }
+
+  async function loadWeather(lat, lon, placeName) {
+    setStatus("Fetching weather data");
+    try {
+      const url = "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon +
+        "&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m" +
+        "&daily=temperature_2m_max,temperature_2m_min,weather_code,sunrise" +
+        "&wind_speed_unit=" + CONFIG.windUnit + "&temperature_unit=" + CONFIG.unit + "&timezone=auto";
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Weather request failed");
+      const data = await res.json();
+      const c = data.current;
+
+      document.getElementById("temp-val").textContent = Math.round(c.temperature_2m) + "°";
+      document.getElementById("temp-icon").innerHTML = weatherIcon(c.weather_code);
+      document.getElementById("condition-text").textContent = (WEATHER_CODES[c.weather_code] || "Conditions unknown") + " · " + placeName;
+      document.getElementById("wind").textContent = Math.round(c.wind_speed_10m) + (CONFIG.windUnit === "kmh" ? " km/h " : " mph ") + windDir(c.wind_direction_10m);
+
+      if (data.daily && data.daily.sunrise && data.daily.sunrise[0]) {
+        const sr = new Date(data.daily.sunrise[0]);
+        document.getElementById("sunrise").textContent = sr.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      }
+
+      if (data.daily) renderForecast(data.daily);
+
+      const now = new Date();
+      setStatus("Updated " + now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
+    } catch (err) {
+      setStatus("Weather unavailable — check connection");
+    }
+  }
+
+  function renderForecast(daily) {
+    const dayLabels = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
+    const row = document.getElementById("forecast-row");
+    row.innerHTML = "";
+    const count = Math.min(4, daily.time.length);
+    for (let i = 0; i < count; i++) {
+      const d = new Date(daily.time[i] + "T12:00:00");
+      const label = i === 0 ? "TODAY" : dayLabels[d.getDay()];
+      const hi = Math.round(daily.temperature_2m_max[i]);
+      const lo = Math.round(daily.temperature_2m_min[i]);
+      const code = daily.weather_code[i];
+
+      const cell = document.createElement("div");
+      cell.className = "forecast-cell";
+      cell.innerHTML =
+        "<div class=\"fc-day\">" + label + "</div>" +
+        weatherIcon(code) +
+        "<div class=\"fc-temps\">" + hi + "<span class=\"lo\">" + lo + "</span></div>";
+      row.appendChild(cell);
+    }
+  }
+
+  async function geocodeCity(name) {
+    setStatus("Searching for " + name);
+    try {
+      const url = "https://geocoding-api.open-meteo.com/v1/search?name=" + encodeURIComponent(name) + "&count=1";
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.results && data.results.length) {
+        const r = data.results[0];
+        const label = r.name + (r.country_code ? ", " + r.country_code : "");
+        loadWeather(r.latitude, r.longitude, label);
+      } else {
+        setStatus("No matching location found");
+      }
+    } catch (err) {
+      setStatus("Search failed — check connection");
+    }
+  }
+
+  if (CONFIG.city) {
+    geocodeCity(CONFIG.city);
+  } else {
+    loadWeather(CONFIG.lat, CONFIG.lon, CONFIG.place);
+  }
+
+  // --- Widget showcase sequence ---
+  // For the first 3 minutes after load, every enabled widget below shows at
+  // once (the "neatly arranged" starting layout). After that, they take
+  // turns showing solo for 1 minute each, in this order: Local flights →
+  // International flights → Stay info → Currency → Checkout. After the
+  // rotation finishes, it settles into a permanent final state showing just
+  // Stay info and Currency together. Widgets outside this group (clock,
+  // weather, welcome message, news ticker, device badge) are unaffected —
+  // this only choreographs these five.
+  const SHOWCASE_ROTATION = ["flightLocal", "flightIntl", "stay", "currency", "checkout"];
+  const SHOWCASE_ALL_MS = 3 * 60 * 1000;
+  const SHOWCASE_STEP_MS = 60 * 1000;
+  const SHOWCASE_ROTATION_END_MS = SHOWCASE_ALL_MS + SHOWCASE_ROTATION.length * SHOWCASE_STEP_MS;
+  const SHOWCASE_FINAL_KEYS = ["checkout", "stay", "currency"];
+  const pageLoadTime = Date.now();
+
+  const WIDGET_EL_IDS = {
+    flightLocal: "flight-widget-local",
+    flightIntl: "flight-widget-intl",
+    stay: "stay-panel",
+    currency: "currency-panel",
+    checkout: "checkout-widget"
+  };
+  // Whether each widget actually has something to show right now (enabled in
+  // the CMS and, where relevant, has loaded content) — the showcase sequence
+  // only ever reveals a widget that would otherwise be shown anyway.
+  const widgetAvailable = { flightLocal: false, flightIntl: false, stay: false, currency: false, checkout: false };
+
+  function currentShowcasePhase() {
+    if (!CONFIG.showcase) return { mode: "all" };
+    const elapsed = Date.now() - pageLoadTime;
+    if (elapsed < SHOWCASE_ALL_MS) return { mode: "all" };
+    if (elapsed < SHOWCASE_ROTATION_END_MS) {
+      const stepIndex = Math.floor((elapsed - SHOWCASE_ALL_MS) / SHOWCASE_STEP_MS);
+      return { mode: "solo", key: SHOWCASE_ROTATION[Math.min(stepIndex, SHOWCASE_ROTATION.length - 1)] };
+    }
+    return { mode: "final" };
+  }
+
+  function isVisibleInPhase(key) {
+    const phase = currentShowcasePhase();
+    if (phase.mode === "all") return true;
+    if (phase.mode === "solo") return phase.key === key;
+    return SHOWCASE_FINAL_KEYS.includes(key);
+  }
+
+  function applyShowcaseVisibility() {
+    Object.keys(WIDGET_EL_IDS).forEach(key => {
+      const el = document.getElementById(WIDGET_EL_IDS[key]);
+      if (!el) return;
+      el.style.display = (widgetAvailable[key] && isVisibleInPhase(key)) ? "block" : "none";
+    });
+  }
+  setInterval(applyShowcaseVisibility, 1000);
+
+  // --- Flight widgets: Accra (ACC) to local Ghana airports and international
+  // hubs, as two independent panels rather than one combined widget ---
+  const LOCAL_DESTS = [
+    { label: "Kumasi", code: "KMS" },
+    { label: "Sunyani", code: "NYI" },
+    { label: "Tamale", code: "TML" },
+    { label: "Ho", code: "HZO" },
+    { label: "Wa", code: "WZA" },
+    { label: "Takoradi", code: "TKD" }
+  ];
+  const INTL_DESTS = [
+    { label: "USA", code: "JFK" },
+    { label: "Canada", code: "YYZ" },
+    { label: "UK", code: "LHR" },
+    { label: "Australia", code: "SYD" },
+    { label: "Germany", code: "FRA" },
+    { label: "France", code: "CDG" },
+    { label: "Amsterdam", code: "AMS" }
+  ];
+
+  function rowsHTML(dests, statusFor) {
+    return dests.map(d =>
+      '<div class="fw-row"><span class="fw-dest">' + d.label +
+      '<span class="fw-code">' + d.code + '</span></span>' +
+      (statusFor ? statusFor(d) : '<span class="fw-status">—</span>') +
+      '</div>'
+    ).join("");
+  }
+
+  function renderFlightPanel(prefix, dests, statusFor, note) {
+    document.getElementById("flight-list-" + prefix).innerHTML = rowsHTML(dests, statusFor);
+    document.getElementById("flight-note-" + prefix).textContent = note;
+  }
+
+  function statusForBuilder(flights) {
+    return (d) => {
+      const match = flights.find(f => f.arrival && f.arrival.iata === d.code);
+      if (!match) return '<span class="fw-status">No flight found</span>';
+      const flightNo = (match.flight && (match.flight.iata || match.flight.number)) || "";
+      const airline = (match.airline && match.airline.name) || "";
+      const sched = match.departure && match.departure.scheduled
+        ? new Date(match.departure.scheduled).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+        : "—";
+      const statusText = (match.flight_status || "scheduled").replace(/^\w/, c => c.toUpperCase());
+      return '<span class="fw-status">' + statusText + ' · ' + sched +
+        (flightNo ? '<span class="fw-flightno">' + airline + ' ' + flightNo + '</span>' : '') +
+        '</span>';
+    };
+  }
+
+  // Cache the one shared flight fetch in memory so a later transient failure
+  // (rate limit, brief outage) keeps showing the last real data instead of
+  // reverting to an error — same pattern used for news and currency.
+  let lastGoodFlights = null;
+
+  // Provider 1: AviationStack.
+  async function fetchAviationStack() {
+    const url = "https://api.aviationstack.com/v1/flights?access_key=" +
+      encodeURIComponent(CONFIG.flightKey) + "&dep_iata=ACC&limit=100";
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("AviationStack status " + res.status);
+    const data = await res.json();
+    const flights = (data && data.data) || [];
+    if (!flights.length) throw new Error("AviationStack returned no flights");
+    return { flights, label: "AviationStack" };
+  }
+
+  // Provider 2: AeroDataBox (via RapidAPI) — a separate, independent source
+  // with its own free tier and its own signup, so it doesn't share
+  // AviationStack's rate limit or monthly quota. Its response shape is
+  // normalized into the same fields fetchAviationStack already produces, so
+  // the rest of the app doesn't need to know which one actually answered.
+  async function fetchAeroDataBox() {
+    const pad = (n) => String(n).padStart(2, "0");
+    const fmt = (d) => d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate()) +
+      "T" + pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes());
+    const now = new Date();
+    const later = new Date(now.getTime() + 12 * 3600 * 1000);
+    const url = "https://aerodatabox.p.rapidapi.com/flights/airports/iata/ACC/" +
+      fmt(now) + "/" + fmt(later) +
+      "?withLeg=false&direction=Departure&withCancelled=false&withCodeshared=true&withCargo=false&withPrivate=false&withLocation=false";
+    const res = await fetch(url, {
+      headers: {
+        "X-RapidAPI-Key": CONFIG.flightKey2,
+        "X-RapidAPI-Host": "aerodatabox.p.rapidapi.com"
+      }
+    });
+    if (!res.ok) throw new Error("AeroDataBox status " + res.status);
+    const data = await res.json();
+    const raw = (data && (data.departures || (Array.isArray(data) ? data : null))) || [];
+    if (!Array.isArray(raw) || !raw.length) throw new Error("AeroDataBox returned no flights");
+    const flights = raw.map(item => ({
+      arrival: { iata: item.movement && item.movement.airport && (item.movement.airport.iata || item.movement.airport.icao) },
+      flight: { iata: item.number, number: item.number },
+      airline: { name: (item.airline && item.airline.name) || "" },
+      departure: { scheduled: item.movement && item.movement.scheduledTime && (item.movement.scheduledTime.local || item.movement.scheduledTime.utc) },
+      flight_status: item.status || "scheduled"
+    }));
+    return { flights, label: "AeroDataBox" };
+  }
+
+  async function fetchFlightData() {
+    const providers = [];
+    if (CONFIG.flightKey) providers.push(fetchAviationStack);
+    if (CONFIG.flightKey2) providers.push(fetchAeroDataBox);
+    for (const provider of providers) {
+      try { return await provider(); } catch (err) { /* try the next provider */ }
+    }
+    return null;
+  }
+
+  async function loadFlights() {
+    widgetAvailable.flightLocal = CONFIG.showLocalFlights;
+    widgetAvailable.flightIntl = CONFIG.showIntlFlights;
+    applyShowcaseVisibility();
+
+    if (!CONFIG.showLocalFlights && !CONFIG.showIntlFlights) return;
+
+    if (!CONFIG.flightKey && !CONFIG.flightKey2) {
+      if (CONFIG.showLocalFlights) renderFlightPanel("local", LOCAL_DESTS, null, "Add a free flight API key in the CMS to show live flight status here.");
+      if (CONFIG.showIntlFlights) renderFlightPanel("intl", INTL_DESTS, null, "Add a free flight API key in the CMS to show live flight status here.");
+      return;
+    }
+
+    if (!lastGoodFlights) {
+      if (CONFIG.showLocalFlights) renderFlightPanel("local", LOCAL_DESTS, null, "Loading live flights…");
+      if (CONFIG.showIntlFlights) renderFlightPanel("intl", INTL_DESTS, null, "Loading live flights…");
+    }
+
+    // Tries AviationStack first, then AeroDataBox if that fails — a genuine
+    // second free, independently-keyed source, not just a retry of the same one.
+    const result = await fetchFlightData();
+
+    if (result) {
+      lastGoodFlights = result.flights;
+      const statusFor = statusForBuilder(result.flights);
+      if (CONFIG.showLocalFlights) renderFlightPanel("local", LOCAL_DESTS, statusFor, "Live data via " + result.label);
+      if (CONFIG.showIntlFlights) renderFlightPanel("intl", INTL_DESTS, statusFor, "Live data via " + result.label);
+    } else if (lastGoodFlights) {
+      // Keep showing the last successful data rather than an error.
+      const statusFor = statusForBuilder(lastGoodFlights);
+      if (CONFIG.showLocalFlights) renderFlightPanel("local", LOCAL_DESTS, statusFor, "Showing last known data — rechecking…");
+      if (CONFIG.showIntlFlights) renderFlightPanel("intl", INTL_DESTS, statusFor, "Showing last known data — rechecking…");
+    } else {
+      if (CONFIG.showLocalFlights) renderFlightPanel("local", LOCAL_DESTS, null, "Couldn't load live flights right now — retrying automatically.");
+      if (CONFIG.showIntlFlights) renderFlightPanel("intl", INTL_DESTS, null, "Couldn't load live flights right now — retrying automatically.");
+    }
+  }
+
+  // Retry in the background so a temporary rate limit or outage clears
+  // itself without needing a page reload — light enough not to burn through
+  // the free tier's monthly quota on its own.
+  loadFlights();
+  setInterval(loadFlights, 30 * 60 * 1000);
+
+  // --- Extra cities row: quick current temps for a few other Ghana cities ---
+  const OTHER_CITIES = [
+    { name: "Kumasi", lat: 6.6885, lon: -1.6244 },
+    { name: "Ho", lat: 6.6009, lon: 0.4713 },
+    { name: "Tamale", lat: 9.4008, lon: -0.8393 },
+    { name: "Sunyani", lat: 7.3399, lon: -2.3268 }
+  ];
+
+  async function loadOtherCities() {
+    if (!CONFIG.showCities) {
+      document.getElementById("cities-row").style.display = "none";
+      return;
+    }
+    const row = document.getElementById("cities-row");
+    try {
+      const results = await Promise.all(OTHER_CITIES.map(async (city) => {
+        try {
+          const res = await fetch(
+            "https://api.open-meteo.com/v1/forecast?latitude=" + city.lat + "&longitude=" + city.lon +
+            "&current=temperature_2m&temperature_unit=" + CONFIG.unit
+          );
+          if (!res.ok) throw new Error("bad status");
+          const data = await res.json();
+          const temp = data && data.current ? Math.round(data.current.temperature_2m) : null;
+          return { name: city.name, temp };
+        } catch (err) {
+          return { name: city.name, temp: null };
+        }
+      }));
+
+      row.innerHTML = results.map(r =>
+        '<div class="city-chip"><span class="cc-name">' + r.name + '</span>' +
+        '<span class="cc-temp">' + (r.temp !== null ? r.temp + "°" : "—") + '</span></div>'
+      ).join("");
+    } catch (err) {
+      row.style.display = "none";
+    }
+  }
+  loadOtherCities();
+
+  // --- News ticker: free headlines from Ghana and around the world via RSS ---
+  // Two sources per region, each tried through several independent free
+  // methods, so no single dead feed or proxy can take the whole thing out.
+  const NEWS_FEEDS = [
+    { tag: "gh", label: "GHANA", rss: "https://www.myjoyonline.com/feed/" },
+    { tag: "gh", label: "GHANA", rss: "https://www.graphic.com.gh/news.feed" },
+    { tag: "world", label: "WORLD", rss: "https://feeds.bbci.co.uk/news/world/rss.xml" },
+    { tag: "world", label: "WORLD", rss: "https://feeds.bbci.co.uk/news/world/africa/rss.xml" }
+  ];
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // Method 1: rss2json.com — free, keyless RSS-to-JSON conversion.
+  async function fetchViaRss2Json(rssUrl) {
+    const url = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(rssUrl) + "&count=5";
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("rss2json bad status " + res.status);
+    const data = await res.json();
+    const items = (data && data.status === "ok" && data.items) || [];
+    const titles = items.map(item => item.title).filter(Boolean);
+    if (!titles.length) throw new Error("rss2json returned no items");
+    return titles;
+  }
+
+  // Methods 2–4: fetch the raw RSS/XML through independent free CORS proxies
+  // and parse it directly in the browser — none of these depend on rss2json
+  // or on each other, so all four would need to be down at once to fail.
+  function parseTitlesFromXml(text) {
+    const doc = new DOMParser().parseFromString(text, "application/xml");
+    return Array.from(doc.querySelectorAll("item > title"))
+      .slice(0, 5)
+      .map(el => (el.textContent || "").trim())
+      .filter(Boolean);
+  }
+  async function fetchViaProxy(proxyUrl) {
+    const res = await fetch(proxyUrl);
+    if (!res.ok) throw new Error("proxy bad status " + res.status);
+    const titles = parseTitlesFromXml(await res.text());
+    if (!titles.length) throw new Error("no items parsed from feed");
+    return titles;
+  }
+  const fetchViaAllOrigins = (rssUrl) => fetchViaProxy("https://api.allorigins.win/raw?url=" + encodeURIComponent(rssUrl));
+  const fetchViaCorsProxyIo = (rssUrl) => fetchViaProxy("https://corsproxy.io/?url=" + encodeURIComponent(rssUrl));
+  const fetchViaCodeTabs = (rssUrl) => fetchViaProxy("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(rssUrl));
+
+  async function fetchFeedTitles(rssUrl) {
+    const methods = [fetchViaRss2Json, fetchViaAllOrigins, fetchViaCorsProxyIo, fetchViaCodeTabs];
+    for (const method of methods) {
+      try { return await method(rssUrl); } catch (err) { /* try the next method */ }
+    }
+    return [];
+  }
+
+  // Once headlines have loaded successfully, keep showing them even if a
+  // later background refresh comes back empty — a temporary hiccup should
+  // never blank out something that was already working, and it should never
+  // show an error to a guest either. If nothing has ever loaded yet, the
+  // ticker just stays hidden and keeps quietly retrying, rather than
+  // displaying any "couldn't connect" message.
+  let lastGoodHeadlines = null;
+
+  function renderHeadlines(headlines) {
+    const itemsHTML = headlines.map(h =>
+      '<span class="nt-item"><span class="nt-tag ' + h.tag + '">' + h.label + '</span>' +
+      escapeHtml(h.title) + '</span>'
+    ).join("");
+    const track = document.getElementById("nt-track");
+    track.classList.remove("nt-static");
+    // Duplicate the sequence so the looping animation has no visible seam
+    track.innerHTML = itemsHTML + itemsHTML;
+    document.getElementById("news-ticker").style.display = "block";
+  }
+
+  async function loadNews() {
+    const ticker = document.getElementById("news-ticker");
+    if (!CONFIG.showNews) {
+      ticker.style.display = "none";
+      return;
+    }
+
+    // Try every feed in parallel, keeping the first successful result per
+    // region (tag) so a dead primary source falls back to its backup.
+    const byTag = {};
+    await Promise.all(NEWS_FEEDS.map(async (feed) => {
+      if (byTag[feed.tag] && byTag[feed.tag].length) return; // already have this region covered
+      const titles = await fetchFeedTitles(feed.rss);
+      if (titles.length) {
+        byTag[feed.tag] = titles.map(title => ({ tag: feed.tag, label: feed.label, title }));
+      }
+    }));
+
+    const headlines = Object.values(byTag).flat();
+
+    if (headlines.length) {
+      lastGoodHeadlines = headlines;
+      renderHeadlines(headlines);
+    } else if (lastGoodHeadlines) {
+      // This round found nothing new — keep showing what already worked.
+      renderHeadlines(lastGoodHeadlines);
+    } else {
+      // Never shown anything yet and this attempt also came up empty —
+      // stay hidden rather than surface an error, and try again shortly.
+      ticker.style.display = "none";
+    }
+  }
+
+  // Retry aggressively until the very first success (a fast recheck almost
+  // immediately, since a page-load race is the most common early miss), then
+  // settle into a lighter background check once things are actually working.
+  let newsRetryTimer = null;
+  function scheduleNextNewsCheck() {
+    clearTimeout(newsRetryTimer);
+    const interval = lastGoodHeadlines ? (10 * 60 * 1000) : (15 * 1000);
+    newsRetryTimer = setTimeout(() => {
+      loadNews().then(scheduleNextNewsCheck);
+    }, interval);
+  }
+  loadNews().then(scheduleNextNewsCheck);
+
+  // --- Checkout countdown ---
+  function updateCheckout() {
+    if (!CONFIG.showCheckout || !CONFIG.checkout) { widgetAvailable.checkout = false; applyShowcaseVisibility(); return; }
+    const target = new Date(CONFIG.checkout);
+    if (isNaN(target.getTime())) { widgetAvailable.checkout = false; applyShowcaseVisibility(); return; }
+
+    document.getElementById("co-date").textContent = target.toLocaleDateString([], {
+      weekday: "short", month: "short", day: "numeric", year: "numeric"
+    });
+    document.getElementById("co-time").textContent = target.toLocaleTimeString([], {
+      hour: "numeric", minute: "2-digit"
+    });
+
+    const countdownEl = document.getElementById("co-countdown");
+    const diffMs = target - new Date();
+    if (diffMs <= 0) {
+      countdownEl.textContent = "Checkout time has passed";
+      countdownEl.style.display = "block";
+    } else if (diffMs <= 36 * 3600 * 1000) {
+      // Only surface a live countdown once it's actually close — not useful days out
+      const hrs = Math.floor(diffMs / 3600000);
+      const mins = Math.floor((diffMs % 3600000) / 60000);
+      countdownEl.textContent = "In " + hrs + "h " + mins + "m";
+      countdownEl.style.display = "block";
+    } else {
+      countdownEl.style.display = "none";
+    }
+
+    widgetAvailable.checkout = true;
+    applyShowcaseVisibility();
+  }
+  updateCheckout();
+  setInterval(updateCheckout, 60000);
+
+  // --- WiFi QR code (added into the Stay info panel below) ---
+  function qrImgTag(data, label) {
+    const src = "https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=" + encodeURIComponent(data);
+    return '<div class="stay-qr"><img src="' + src + '" alt="' + escapeHtml(label) + ' QR code"><span>' + escapeHtml(label) + '</span></div>';
+  }
+
+  // --- Currency converter: 1 USD/EUR/GBP -> GHS, via a free keyless rates API ---
+  async function loadCurrency() {
+    if (!CONFIG.showCurrency) return null;
+    try {
+      const res = await fetch("https://open.er-api.com/v6/latest/USD");
+      if (!res.ok) throw new Error("bad status");
+      const data = await res.json();
+      const r = data && data.rates;
+      if (!r || !r.GHS) throw new Error("no rates");
+      const usdToGhs = r.GHS;
+      const eurToGhs = r.EUR ? r.GHS / r.EUR : null;
+      const gbpToGhs = r.GBP ? r.GHS / r.GBP : null;
+      const rows = [];
+      rows.push({ label: "1 USD", value: usdToGhs.toFixed(2) + " GHS" });
+      if (eurToGhs) rows.push({ label: "1 EUR", value: eurToGhs.toFixed(2) + " GHS" });
+      if (gbpToGhs) rows.push({ label: "1 GBP", value: gbpToGhs.toFixed(2) + " GHS" });
+      return rows;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  // --- Stay info panel: house info + WiFi QR code ---
+  async function loadStayPanel() {
+    const rowsHTML = [];
+
+    if (CONFIG.showHouseInfo) {
+      if (CONFIG.doorCode) rowsHTML.push({ label: "Door code", value: CONFIG.doorCode });
+      if (CONFIG.receptionNum) rowsHTML.push({ label: "Reception", value: CONFIG.receptionNum });
+      if (CONFIG.trashDay) rowsHTML.push({ label: "Trash day", value: CONFIG.trashDay });
+      if (CONFIG.policeNum) rowsHTML.push({ label: "Police", value: CONFIG.policeNum });
+      if (CONFIG.hospitalNum) rowsHTML.push({ label: "Hospital", value: CONFIG.hospitalNum });
+    }
+
+    document.getElementById("stay-rows").innerHTML = rowsHTML.map(r =>
+      '<div class="stay-row"><span class="stay-label">' + escapeHtml(r.label) + '</span>' +
+      '<span class="stay-value">' + escapeHtml(r.value) + '</span></div>'
+    ).join("");
+
+    const qrHTML = [];
+    if (CONFIG.showWifi && CONFIG.wifiSsid) {
+      const wifiString = "WIFI:T:WPA;S:" + CONFIG.wifiSsid + ";P:" + (CONFIG.wifiPass || "") + ";;";
+      qrHTML.push(qrImgTag(wifiString, "WiFi"));
+    }
+    document.getElementById("stay-qr-row").innerHTML = qrHTML.join("");
+
+    const hasRows = rowsHTML.length > 0;
+    const hasQr = qrHTML.length > 0;
+    document.getElementById("stay-qr-row").style.display = hasQr ? "flex" : "none";
+    widgetAvailable.stay = hasRows || hasQr;
+    applyShowcaseVisibility();
+  }
+  loadStayPanel();
+
+  // --- Currency panel: its own separate widget ---
+  async function loadCurrencyPanel() {
+    if (!CONFIG.showCurrency) { widgetAvailable.currency = false; applyShowcaseVisibility(); return; }
+    const rows = await loadCurrency();
+    if (!rows) { widgetAvailable.currency = false; applyShowcaseVisibility(); return; }
+    document.getElementById("currency-rows").innerHTML = rows.map(r =>
+      '<div class="stay-row"><span class="stay-label">' + escapeHtml(r.label) + '</span>' +
+      '<span class="stay-value">' + escapeHtml(r.value) + '</span></div>'
+    ).join("");
+    widgetAvailable.currency = true;
+    applyShowcaseVisibility();
+  }
+  loadCurrencyPanel();
+
+  // --- Movable widgets: reposition anything on screen via mouse drag, touch
+  // drag (tablet), or a TV remote's D-pad (arrow keys + OK/Enter). Positions
+  // are kept as an offset from each widget's normal spot, so nothing has to
+  // know about anything else's layout.
+  (function initDraggableWidgets() {
+    const KEYBOARD_STEP = 24;
+    const NO_DRAG_START = "a, button, input, select, .fw-list, .stay-rows";
+    let widgetLayout = {};
+    let grabbedKey = null;
+    let dragState = null;
+
+    function applyOffset(key) {
+      const el = document.querySelector('[data-widget-key="' + key + '"]');
+      if (!el) return;
+      const off = widgetLayout[key] || { dx: 0, dy: 0 };
+      el.style.setProperty("--dx", off.dx + "px");
+      el.style.setProperty("--dy", off.dy + "px");
+    }
+
+    function setOffset(key, dx, dy) {
+      widgetLayout[key] = { dx, dy };
+      applyOffset(key);
+    }
+
+    function applyAllOffsets() {
+      document.querySelectorAll("[data-widget-key]").forEach(el => applyOffset(el.dataset.widgetKey));
+    }
+
+    let saveTimer = null;
+    function saveLayout() {
+      if (!CONFIG.sync) return; // no sync set up — positions still work this session, just won't persist
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        fetch("https://kvdb.io/" + CONFIG.sync + "/layout", {
+          method: "POST",
+          body: JSON.stringify(widgetLayout)
+        }).catch(() => {});
+      }, 500);
+    }
+
+    async function loadLayout() {
+      if (!CONFIG.sync) return;
+      try {
+        const res = await fetch("https://kvdb.io/" + CONFIG.sync + "/layout");
+        if (res.ok) {
+          const saved = await res.json();
+          if (saved && typeof saved === "object") {
+            widgetLayout = saved;
+            // Keep the clean default arrangement during the initial showcase
+            // window rather than jumping straight to a previously-dragged
+            // layout; custom positions apply once that window ends.
+            const delay = CONFIG.showcase ? SHOWCASE_ALL_MS : 0;
+            setTimeout(applyAllOffsets, delay);
+          }
+        }
+      } catch (err) { /* fall back to default positions */ }
+    }
+    loadLayout();
+
+    document.querySelectorAll("[data-widget-key]").forEach(el => {
+      const key = el.dataset.widgetKey;
+
+      el.addEventListener("pointerdown", (e) => {
+        if (e.target.closest(NO_DRAG_START)) return;
+        const current = widgetLayout[key] || { dx: 0, dy: 0 };
+        dragState = { el, startX: e.clientX, startY: e.clientY, baseDx: current.dx, baseDy: current.dy };
+        el.classList.add("dragging");
+        el.setPointerCapture(e.pointerId);
+      });
+
+      el.addEventListener("pointermove", (e) => {
+        if (!dragState || dragState.el !== el) return;
+        setOffset(key, dragState.baseDx + (e.clientX - dragState.startX), dragState.baseDy + (e.clientY - dragState.startY));
+      });
+
+      function endDrag() {
+        if (!dragState || dragState.el !== el) return;
+        el.classList.remove("dragging");
+        dragState = null;
+        saveLayout();
+      }
+      el.addEventListener("pointerup", endDrag);
+      el.addEventListener("pointercancel", endDrag);
+
+      // Keyboard / TV remote: OK or Enter picks the widget up, arrow keys
+      // nudge it, OK or Enter again puts it down. Works the same whether the
+      // "Enter" comes from a real keyboard or a smart TV remote's OK button,
+      // since browsers on TVs map that button to a key event.
+      el.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          if (e.target.closest(NO_DRAG_START)) return;
+          e.preventDefault();
+          if (grabbedKey === key) {
+            grabbedKey = null;
+            el.classList.remove("grabbed");
+            saveLayout();
+          } else {
+            if (grabbedKey) {
+              const prev = document.querySelector('[data-widget-key="' + grabbedKey + '"]');
+              if (prev) prev.classList.remove("grabbed");
+            }
+            grabbedKey = key;
+            el.classList.add("grabbed");
+          }
+          return;
+        }
+        if (grabbedKey !== key) return;
+        const current = widgetLayout[key] || { dx: 0, dy: 0 };
+        let { dx, dy } = current;
+        if (e.key === "ArrowUp") dy -= KEYBOARD_STEP;
+        else if (e.key === "ArrowDown") dy += KEYBOARD_STEP;
+        else if (e.key === "ArrowLeft") dx -= KEYBOARD_STEP;
+        else if (e.key === "ArrowRight") dx += KEYBOARD_STEP;
+        else return;
+        e.preventDefault();
+        setOffset(key, dx, dy);
+      });
+    });
+  })();
+</script>
+</body>
+</html>
